@@ -1,5 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, Form
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 import io
 import cv2
 import numpy as np
@@ -9,9 +10,8 @@ import os
 
 app = FastAPI()
 
-@app.get("/")
-def read_root():
-    return {"message": "VidSpri Backend is running!"}
+# Serve static files from the root directory
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
 
 @app.post("/generate-sprite/")
 async def generate_sprite(
