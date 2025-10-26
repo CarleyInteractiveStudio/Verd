@@ -7,6 +7,8 @@ body {
     align-items: center;
     min-height: 100vh;
     margin: 0;
+    padding: 1rem;
+    box-sizing: border-box;
 }
 
 .container {
@@ -22,6 +24,15 @@ body {
 h1 {
     color: #ffffff;
     margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.logo {
+    width: 40px;
+    height: 40px;
 }
 
 p {
@@ -49,6 +60,27 @@ input[type="number"] {
     color: #e0e0e0;
     border-radius: 4px;
     box-sizing: border-box;
+}
+
+.time-range-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.time-range-controls label {
+    margin-bottom: 0;
+}
+
+#time-range-inputs {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+}
+
+.time-input-group {
+    flex: 1;
 }
 
 button {
