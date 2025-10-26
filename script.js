@@ -1,6 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('sprite-form');
     const videoFileInput = document.getElementById('video-file');
+    const videoPreviewContainer = document.getElementById('video-preview-container');
+    const videoPreview = document.getElementById('video-preview');
+    const markStartBtn = document.getElementById('mark-start-btn');
+    const markEndBtn = document.getElementById('mark-end-btn');
     const framesInput = document.getElementById('frames');
     const fullVideoCheckbox = document.getElementById('full-video-checkbox');
     const timeRangeInputs = document.getElementById('time-range-inputs');
@@ -12,6 +16,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingIndicator = document.getElementById('loading-indicator');
     const errorMessage = document.getElementById('error-message');
     const errorMessageParagraph = errorMessage.querySelector('p');
+
+    // Show video previewer when a file is selected
+    videoFileInput.addEventListener('change', () => {
+        if (videoFileInput.files && videoFileInput.files[0]) {
+            const videoURL = URL.createObjectURL(videoFileInput.files[0]);
+            videoPreview.src = videoURL;
+            videoPreviewContainer.classList.remove('hidden');
+        } else {
+            videoPreviewContainer.classList.add('hidden');
+        }
+    });
+
+    // Mark Start Time button logic
+    markStartBtn.addEventListener('click', () => {
+        startTimeInput.value = videoPreview.currentTime.toFixed(2);
+        fullVideoCheckbox.checked = false;
+        timeRangeInputs.classList.remove('hidden');
+    });
+
+    // Mark End Time button logic
+    markEndBtn.addEventListener('click', () => {
+        endTimeInput.value = videoPreview.currentTime.toFixed(2);
+        fullVideoCheckbox.checked = false;
+        timeRangeInputs.classList.remove('hidden');
+    });
 
     // Toggle visibility of time range inputs based on checkbox
     fullVideoCheckbox.addEventListener('change', () => {

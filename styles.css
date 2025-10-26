@@ -45,6 +45,31 @@ p {
     text-align: left;
 }
 
+#video-preview-container {
+    margin-bottom: 1.5rem;
+}
+
+#video-preview {
+    width: 100%;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.preview-controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.preview-controls button {
+    background-color: #373737;
+    flex-grow: 1;
+}
+
+.preview-controls button:hover {
+    background-color: #4f4f4f;
+}
+
 label {
     display: block;
     margin-bottom: 0.5rem;
