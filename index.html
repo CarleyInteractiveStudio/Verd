@@ -49,18 +49,26 @@
                 </div>
             </div>
 
-            <button type="submit">Generar Sprite</button>
+            <button type="submit" id="extract-frames-btn">1. Extraer Fotogramas</button>
         </form>
+
+        <div id="frame-preview-container" class="hidden">
+            <h2>Vista Previa de Fotogramas</h2>
+            <div id="frames-output"></div>
+            <button type="button" id="generate-sprite-btn">2. Quitar Fondo y Generar Sprite</button>
+        </div>
+
+        <div id="progress-container" class="hidden">
+            <p id="progress-text">Procesando fotogramas...</p>
+            <div class="progress-bar">
+                <div id="progress-bar-inner"></div>
+            </div>
+        </div>
 
         <div id="result-container" class="hidden">
             <h2>¡Tu Hoja de Sprites está Lista!</h2>
             <img id="sprite-image" src="" alt="Hoja de sprites generada">
             <a id="download-link" href="" download="sprite.png">Descargar Hoja de Sprites</a>
-        </div>
-
-        <div id="loading-indicator" class="hidden">
-            <p>Procesando... esto puede tardar un momento.</p>
-            <div class="spinner"></div>
         </div>
 
         <div id="error-message" class="hidden">
