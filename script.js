@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hideAllSections();
         progressContainer.classList.remove('hidden');
         progressText.textContent = "Extrayendo fotogramas del video...";
-        updateProgressBar(0);
+        updateProgressBar(50); // Simulated progress
 
         const frameCount = parseInt(framesInput.value, 10);
         let startTime = 0;
@@ -95,8 +95,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            extractedFrames = await extractFramesFromVideo(videoFile, frameCount, startTime, endTime);
-            displayFramePreviews(extractedFrames);
+            const frames = await extractFramesFromVideo(videoFile, frameCount, startTime, endTime);
+            extractedFrames = frames.map((blob, index) => ({ id: index, blob })); // Give each frame a unique ID
+            displayFramePreviews();
             framePreviewContainer.classList.remove('hidden');
         } catch (error) {
             showError(`Error al extraer fotogramas: ${error.message}`);
@@ -105,48 +106,51 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Step 2: Send frames to backend and generate sprite
+    // Step 2: Create spritesheet, send to backend, and show result
     generateSpriteBtn.addEventListener('click', async () => {
         if (extractedFrames.length === 0) {
-            showError("No hay fotogramas para procesar. Por favor, extráelos primero.");
+            showError("No hay fotogramas para procesar.");
             return;
         }
 
         hideAllSections();
         progressContainer.classList.remove('hidden');
+        progressText.textContent = "Uniendo fotogramas...";
+        updateProgressBar(30);
 
-        let processedFrames = [];
-        for (let i = 0; i < extractedFrames.length; i++) {
-            progressText.textContent = `Procesando fotograma ${i + 1} de ${extractedFrames.length}...`;
-            updateProgressBar(((i + 1) / extractedFrames.length) * 100);
+        try {
+            // Create a single spritesheet image from the remaining frames
+            const spritesheetBlob = await createSpriteSheet(extractedFrames.map(f => f.blob), false);
 
-            try {
-                const formData = new FormData();
-                formData.append('image', extractedFrames[i], `frame_${i}.png`);
+            progressText.textContent = "Enviando al servidor para quitar el fondo...";
+            updateProgressBar(60);
 
-                const response = await fetch(backendUrl, {
-                    method: 'POST',
-                    body: formData,
-                });
+            const formData = new FormData();
+            formData.append('image', spritesheetBlob, 'spritesheet.png');
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ detail: `Server error on frame ${i+1}` }));
-                    throw new Error(errorData.detail);
-                }
+            const response = await fetch(backendUrl, {
+                method: 'POST',
+                body: formData,
+            });
 
-                const imageBlob = await response.blob();
-                processedFrames.push(imageBlob);
-            } catch (error) {
-                showError(`Error en el fotograma ${i + 1}: ${error.message}`);
-                progressContainer.classList.add('hidden');
-                return;
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: `Error del servidor.` }));
+                throw new Error(errorData.detail);
             }
-        }
 
-        progressText.textContent = "Creando la hoja de sprites...";
-        await createSpriteSheet(processedFrames);
-        progressContainer.classList.add('hidden');
-        resultContainer.classList.remove('hidden');
+            const finalImageBlob = await response.blob();
+
+            // Display the final result
+            const finalUrl = URL.createObjectURL(finalImageBlob);
+            spriteImage.src = finalUrl;
+            downloadLink.href = finalUrl;
+            resultContainer.classList.remove('hidden');
+
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            progressContainer.classList.add('hidden');
+        }
     });
 
     // --- Helper Functions ---
@@ -167,12 +171,26 @@ document.addEventListener('DOMContentLoaded', () => {
         progressBarInner.style.width = `${percentage}%`;
     }
 
-    function displayFramePreviews(frames) {
+    function displayFramePreviews() {
         framesOutput.innerHTML = ''; // Clear previous previews
-        frames.forEach(frameBlob => {
+        extractedFrames.forEach(frameData => {
+            const frameContainer = document.createElement('div');
+            frameContainer.className = 'frame-container';
+
             const img = document.createElement('img');
-            img.src = URL.createObjectURL(frameBlob);
-            framesOutput.appendChild(img);
+            img.src = URL.createObjectURL(frameData.blob);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.innerHTML = '&times;';
+            deleteBtn.onclick = () => {
+                extractedFrames = extractedFrames.filter(f => f.id !== frameData.id);
+                frameContainer.remove();
+            };
+
+            frameContainer.appendChild(img);
+            frameContainer.appendChild(deleteBtn);
+            framesOutput.appendChild(frameContainer);
         });
     }
 
@@ -183,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const context = canvas.getContext('2d');
             const frames = [];
             const duration = endTime - startTime;
-            const interval = duration / frameCount;
+            const interval = duration / (frameCount > 1 ? frameCount -1 : 1);
 
             video.src = URL.createObjectURL(videoFile);
             video.muted = true;
@@ -194,19 +212,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 video.currentTime = startTime;
             });
 
-            video.addEventListener('seeked', async () => {
+            video.addEventListener('seeked', () => {
                 context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
                 canvas.toBlob(blob => {
                     frames.push(blob);
 
                     if (frames.length < frameCount) {
                         const nextTime = video.currentTime + interval;
-                        if(nextTime <= endTime) {
-                            video.currentTime = nextTime;
-                        } else {
-                           // If we are over the end time, we are done
-                           resolve(frames);
-                        }
+                        video.currentTime = Math.min(nextTime, endTime);
                     } else {
                         resolve(frames);
                     }
@@ -218,35 +231,48 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function createSpriteSheet(frames) {
-        const images = await Promise.all(frames.map(blob => {
-            return new Promise(resolve => {
-                const img = new Image();
-                img.onload = () => resolve(img);
-                img.src = URL.createObjectURL(blob);
+    async function createSpriteSheet(blobs, isFinal) {
+         return new Promise(async (resolve) => {
+            const images = await Promise.all(blobs.map(blob => {
+                return new Promise(resolveImg => {
+                    const img = new Image();
+                    img.onload = () => resolveImg(img);
+                    img.src = URL.createObjectURL(blob);
+                });
+            }));
+
+            if (images.length === 0) {
+                if (isFinal) {
+                    spriteImage.src = '';
+                    downloadLink.href = '';
+                }
+                return resolve(null);
+            };
+
+            const maxHeight = Math.max(...images.map(img => img.height));
+            const totalWidth = images.reduce((sum, img) => sum + img.width, 0);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = totalWidth;
+            canvas.height = maxHeight;
+            const context = canvas.getContext('2d');
+
+            let currentX = 0;
+            images.forEach(img => {
+                context.drawImage(img, currentX, 0);
+                currentX += img.width;
             });
-        }));
 
-        if (images.length === 0) return;
-
-        const maxHeight = Math.max(...images.map(img => img.height));
-        const totalWidth = images.reduce((sum, img) => sum + img.width, 0);
-
-        const canvas = document.createElement('canvas');
-        canvas.width = totalWidth;
-        canvas.height = maxHeight;
-        const context = canvas.getContext('2d');
-
-        let currentX = 0;
-        images.forEach(img => {
-            context.drawImage(img, currentX, 0);
-            currentX += img.width;
+            if (isFinal) {
+                canvas.toBlob(blob => {
+                    const url = URL.createObjectURL(blob);
+                    spriteImage.src = url;
+                    downloadLink.href = url;
+                    resolve();
+                }, 'image/png');
+            } else {
+                canvas.toBlob(blob => resolve(blob), 'image/png');
+            }
         });
-
-        canvas.toBlob(blob => {
-            const url = URL.createObjectURL(blob);
-            spriteImage.src = url;
-            downloadLink.href = url;
-        }, 'image/png');
     }
 });
