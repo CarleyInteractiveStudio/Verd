@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const timeRangeInputs = document.getElementById('time-range-inputs');
     const startTimeInput = document.getElementById('start-time');
     const endTimeInput = document.getElementById('end-time');
+    const cropOptionsBtn = document.getElementById('crop-options-btn');
 
     const extractFramesBtn = document.getElementById('extract-frames-btn');
     const framePreviewContainer = document.getElementById('frame-preview-container');
@@ -27,23 +28,107 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMessage = document.getElementById('error-message');
     const errorMessageParagraph = errorMessage.querySelector('p');
 
+    // Modal elements
+    const cropModal = document.getElementById('crop-modal');
+    const closeBtn = document.querySelector('.close-btn');
+    const cropArea = document.getElementById('crop-area');
+    const setCropAreaBtn = document.getElementById('set-crop-area-btn');
+    const setEraseAreaBtn = document.getElementById('set-erase-area-btn');
+    const applyCropBtn = document.getElementById('apply-crop-btn');
+    const cancelCropBtn = document.getElementById('cancel-crop-btn');
+
     let extractedFrames = []; // To store the extracted frame blobs
     const backendUrl = 'https://carley1234-vidspri.hf.space/remove-background/';
+    let cropper = null;
+    let cropCoords = null;
+    let eraseCoords = null;
+    let currentCropMode = null; // 'crop' or 'erase'
 
     // --- Event Listeners ---
 
     // Show video previewer when a file is selected
     videoFileInput.addEventListener('change', () => {
+        // Reset crop state when a new video is loaded
+        cropCoords = null;
+        eraseCoords = null;
+
         if (videoFileInput.files && videoFileInput.files[0]) {
             const videoURL = URL.createObjectURL(videoFileInput.files[0]);
             videoPreview.src = videoURL;
             videoPreviewContainer.classList.remove('hidden');
+            cropOptionsBtn.classList.remove('hidden'); // Show crop button
             framePreviewContainer.classList.add('hidden'); // Hide old previews
             resultContainer.classList.add('hidden'); // Hide old results
         } else {
             videoPreviewContainer.classList.add('hidden');
+            cropOptionsBtn.classList.add('hidden'); // Hide crop button
         }
     });
+
+    // --- Cropping Modal Logic ---
+    function openModal() {
+        cropModal.classList.remove('hidden');
+        cropModal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        cropModal.classList.add('hidden');
+        cropModal.style.display = 'none';
+        if (cropper) {
+            cropper.destroy();
+            cropper = null;
+        }
+        cropArea.innerHTML = '';
+    }
+
+    cropOptionsBtn.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    cancelCropBtn.addEventListener('click', closeModal);
+    window.addEventListener('click', (event) => {
+        if (event.target == cropModal) {
+            closeModal();
+        }
+    });
+
+    // --- Cropper Initialization ---
+
+    function initializeCropper(mode) {
+        currentCropMode = mode;
+        // Take a snapshot of the current video frame to use in the cropper
+        const canvas = document.createElement('canvas');
+        canvas.width = videoPreview.videoWidth;
+        canvas.height = videoPreview.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(videoPreview, 0, 0, canvas.width, canvas.height);
+        const imageUrl = canvas.toDataURL();
+
+        cropArea.innerHTML = `<img src="${imageUrl}" id="cropper-image" style="max-width: 100%;">`;
+        const image = document.getElementById('cropper-image');
+
+        image.onload = () => {
+            if (cropper) {
+                cropper.destroy();
+            }
+            cropper = new ImageCropper('#crop-area', image.src, {
+                update_cb: (data) => {
+                    if (currentCropMode === 'crop') {
+                        cropCoords = data;
+                    } else if (currentCropMode === 'erase') {
+                        eraseCoords = data;
+                    }
+                }
+            });
+        };
+    }
+
+    setCropAreaBtn.addEventListener('click', () => initializeCropper('crop'));
+    setEraseAreaBtn.addEventListener('click', () => initializeCropper('erase'));
+
+    applyCropBtn.addEventListener('click', () => {
+        // The coordinates are already saved by the update_cb
+        closeModal();
+    });
+
 
     // Mark Start Time button logic
     markStartBtn.addEventListener('click', () => {
@@ -201,24 +286,49 @@ document.addEventListener('DOMContentLoaded', () => {
             const context = canvas.getContext('2d');
             const frames = [];
             const duration = endTime - startTime;
-            const interval = duration / (frameCount > 1 ? frameCount -1 : 1);
+            const interval = duration / (frameCount > 1 ? frameCount - 1 : 1);
 
             video.src = URL.createObjectURL(videoFile);
             video.muted = true;
 
             video.addEventListener('loadedmetadata', () => {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+                // Set canvas size based on crop area if it exists
+                if (cropCoords) {
+                    canvas.width = cropCoords.width;
+                    canvas.height = cropCoords.height;
+                } else {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                }
                 video.currentTime = startTime;
             });
 
             video.addEventListener('seeked', () => {
-                context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+                // Clear context for each frame
+                context.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Draw the video frame, applying the crop if necessary
+                const sourceX = cropCoords ? cropCoords.x : 0;
+                const sourceY = cropCoords ? cropCoords.y : 0;
+                const sourceWidth = cropCoords ? cropCoords.width : video.videoWidth;
+                const sourceHeight = cropCoords ? cropCoords.height : video.videoHeight;
+
+                context.drawImage(video, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
+
+                // Apply the erase area if it exists
+                if (eraseCoords) {
+                    // We need to adjust erase coordinates relative to the crop
+                    const eraseX = eraseCoords.x - (cropCoords ? cropCoords.x : 0);
+                    const eraseY = eraseCoords.y - (cropCoords ? cropCoords.y : 0);
+                    context.clearRect(eraseX, eraseY, eraseCoords.width, eraseCoords.height);
+                }
+
                 canvas.toBlob(blob => {
                     frames.push(blob);
 
                     if (frames.length < frameCount) {
                         const nextTime = video.currentTime + interval;
+                        // Clamp nextTime to the end time to avoid overshooting
                         video.currentTime = Math.min(nextTime, endTime);
                     } else {
                         resolve(frames);
@@ -227,7 +337,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             video.addEventListener('error', (e) => reject(new Error('Error al cargar el video.')));
-            video.load();
         });
     }
 
