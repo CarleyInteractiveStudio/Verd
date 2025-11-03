@@ -27,6 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadLink = document.getElementById('download-link');
     const errorMessage = document.getElementById('error-message');
     const errorMessageParagraph = errorMessage.querySelector('p');
+    const serverMessage = document.getElementById('server-message');
+    const bannerAdContainer = document.getElementById('banner-ad-container');
 
     // Modal elements
     const cropModal = document.getElementById('crop-modal');
@@ -43,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let cropCoords = null;
     let eraseCoords = null;
     let currentCropMode = null; // 'crop' or 'erase'
+    let bannerInterval = null;
 
     // --- Event Listeners ---
 
@@ -200,6 +203,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         hideAllSections();
         progressContainer.classList.remove('hidden');
+        serverMessage.classList.remove('hidden');
+        bannerAdContainer.classList.remove('hidden');
+
+        // AdSense Auto Ads will automatically detect the visible container and place an ad.
+        // We don't need a manual refresh loop.
 
         const totalFrames = extractedFrames.length;
         const processedFrames = [];
@@ -238,6 +246,8 @@ document.addEventListener('DOMContentLoaded', () => {
             showError(error.message);
         } finally {
             progressContainer.classList.add('hidden');
+            serverMessage.classList.add('hidden');
+            bannerAdContainer.classList.add('hidden');
         }
     });
 
@@ -291,7 +301,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const duration = endTime - startTime;
             const interval = duration / (frameCount > 1 ? frameCount - 1 : 1);
 
-            video.src = URL.createObjectURL(videoFile);
             video.muted = true;
 
             video.addEventListener('loadedmetadata', () => {
@@ -340,6 +349,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             video.addEventListener('error', (e) => reject(new Error('Error al cargar el video.')));
+
+            // Set the src and load the video *after* all event listeners are attached
+            video.src = URL.createObjectURL(videoFile);
+            video.load();
         });
     }
 
