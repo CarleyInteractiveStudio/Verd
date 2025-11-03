@@ -191,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Step 2: Create spritesheet, send to backend, and show result
+    // Step 2: Send frames one by one, then create spritesheet and show result
     generateSpriteBtn.addEventListener('click', async () => {
         if (extractedFrames.length === 0) {
             showError("No hay fotogramas para procesar.");
@@ -200,35 +200,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
         hideAllSections();
         progressContainer.classList.remove('hidden');
-        progressText.textContent = "Uniendo fotogramas...";
-        updateProgressBar(30);
+
+        const totalFrames = extractedFrames.length;
+        const processedFrames = [];
 
         try {
-            // Create a single spritesheet image from the remaining frames
-            const spritesheetBlob = await createSpriteSheet(extractedFrames.map(f => f.blob), false);
+            for (let i = 0; i < totalFrames; i++) {
+                const frameData = extractedFrames[i];
+                progressText.textContent = `Procesando fotograma ${i + 1} de ${totalFrames}...`;
 
-            progressText.textContent = "Enviando al servidor para quitar el fondo...";
-            updateProgressBar(60);
+                const formData = new FormData();
+                formData.append('image', frameData.blob, `frame_${frameData.id}.png`);
 
-            const formData = new FormData();
-            formData.append('image', spritesheetBlob, 'spritesheet.png');
+                const response = await fetch(backendUrl, {
+                    method: 'POST',
+                    body: formData,
+                });
 
-            const response = await fetch(backendUrl, {
-                method: 'POST',
-                body: formData,
-            });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: `Error del servidor en el fotograma ${i + 1}.` }));
+                    throw new Error(errorData.detail);
+                }
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ detail: `Error del servidor.` }));
-                throw new Error(errorData.detail);
+                const processedBlob = await response.blob();
+                processedFrames.push(processedBlob);
+
+                // Update progress bar after each successful processing
+                updateProgressBar(((i + 1) / totalFrames) * 100);
             }
 
-            const finalImageBlob = await response.blob();
-
-            // Display the final result
-            const finalUrl = URL.createObjectURL(finalImageBlob);
-            spriteImage.src = finalUrl;
-            downloadLink.href = finalUrl;
+            // Once all frames are processed, create the final spritesheet
+            progressText.textContent = "Creando la hoja de sprites final...";
+            await createSpriteSheet(processedFrames, true); // true indicates it's the final sprite
             resultContainer.classList.remove('hidden');
 
         } catch (error) {
