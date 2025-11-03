@@ -291,6 +291,24 @@ button:hover {
     gap: 10px;
 }
 
+.crop-buttons .secondary-btn {
+    background-color: #555;
+    grid-column: span 2; /* Make it full width */
+}
+
+.crop-buttons .secondary-btn:hover {
+    background-color: #6E6E6E;
+}
+
+#crop-mode-title {
+    color: #03dac6;
+    margin-top: -10px;
+    margin-bottom: 10px;
+    font-size: 1rem;
+    font-weight: bold;
+    height: 1.2rem; /* Reserve space to prevent layout shift */
+}
+
 #server-message {
     font-size: 0.9rem;
     color: #a0a0a0;

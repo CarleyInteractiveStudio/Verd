@@ -38,6 +38,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const setEraseAreaBtn = document.getElementById('set-erase-area-btn');
     const applyCropBtn = document.getElementById('apply-crop-btn');
     const cancelCropBtn = document.getElementById('cancel-crop-btn');
+    const clearCropBtn = document.getElementById('clear-crop-btn');
+    const cropModeTitle = document.getElementById('crop-mode-title');
 
     let extractedFrames = []; // To store the extracted frame blobs
     const backendUrl = 'https://carley1234-vidspri.hf.space/remove-background/';
@@ -82,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cropper = null;
         }
         cropArea.innerHTML = '';
+        cropModeTitle.textContent = ''; // Clear title on close
     }
 
     cropOptionsBtn.addEventListener('click', openModal);
@@ -96,8 +99,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Cropper Initialization ---
 
     function initializeCropper(mode) {
+        // Always destroy the previous instance to prevent conflicts
+        if (cropper) {
+            cropper.destroy();
+            cropper = null;
+        }
+        cropArea.innerHTML = ''; // Clear the area
+
         currentCropMode = mode;
-        // Take a snapshot of the current video frame to use in the cropper
+        cropModeTitle.textContent = mode === 'crop'
+            ? 'Editando: Área de Fotogramas'
+            : 'Editando: Zona a Eliminar';
+
+        // Take a fresh snapshot
         const canvas = document.createElement('canvas');
         canvas.width = videoPreview.videoWidth;
         canvas.height = videoPreview.videoHeight;
@@ -105,23 +119,28 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.drawImage(videoPreview, 0, 0, canvas.width, canvas.height);
         const imageUrl = canvas.toDataURL();
 
-        cropArea.innerHTML = `<img src="${imageUrl}" id="cropper-image" style="max-width: 100%;">`;
-        const image = document.getElementById('cropper-image');
+        // Recreate the image element
+        const image = document.createElement('img');
+        image.id = 'cropper-image';
+        image.src = imageUrl;
+        image.style.maxWidth = '100%';
 
         image.onload = () => {
-            if (cropper) {
-                cropper.destroy();
-            }
+            cropArea.appendChild(image);
             cropper = new ImageCropper('#crop-area', image.src, {
                 update_cb: (data) => {
-                    if (currentCropMode === 'crop') {
+                    // This callback saves data live as the user adjusts the cropper
+                    if (mode === 'crop') {
                         cropCoords = data;
-                    } else if (currentCropMode === 'erase') {
+                    } else if (mode === 'erase') {
                         eraseCoords = data;
                     }
                 }
             });
         };
+
+        cropArea.innerHTML = ''; // Clear previous content before loading new image
+        cropArea.appendChild(image);
     }
 
     setCropAreaBtn.addEventListener('click', () => initializeCropper('crop'));
@@ -130,6 +149,17 @@ document.addEventListener('DOMContentLoaded', () => {
     applyCropBtn.addEventListener('click', () => {
         // The coordinates are already saved by the update_cb
         closeModal();
+    });
+
+    clearCropBtn.addEventListener('click', () => {
+        cropCoords = null;
+        eraseCoords = null;
+        if (cropper) {
+            cropper.destroy();
+            cropper = null;
+        }
+        cropArea.innerHTML = '';
+        cropModeTitle.textContent = '';
     });
 
 
@@ -179,6 +209,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isNaN(startTime) || isNaN(endTime) || startTime >= endTime) {
             showError("El rango de tiempo seleccionado no es válido.");
+            return;
+        }
+
+        // Validate crop area size before starting extraction
+        if (cropCoords && (cropCoords.width <= 0 || cropCoords.height <= 0)) {
+            showError("El área de recorte seleccionada es inválida o demasiado pequeña. Por favor, ajústala e inténtalo de nuevo.");
+            progressContainer.classList.add('hidden');
             return;
         }
 
