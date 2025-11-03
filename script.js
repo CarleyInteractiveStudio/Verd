@@ -60,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (videoFileInput.files && videoFileInput.files[0]) {
             const videoURL = URL.createObjectURL(videoFileInput.files[0]);
             videoPreview.src = videoURL;
+            videoPreview.load(); // Explicitly start loading the video
             videoPreviewContainer.classList.remove('hidden');
             cropOptionsBtn.classList.remove('hidden'); // Show crop button
             framePreviewContainer.classList.add('hidden'); // Hide old previews
@@ -68,6 +69,11 @@ document.addEventListener('DOMContentLoaded', () => {
             videoPreviewContainer.classList.add('hidden');
             cropOptionsBtn.classList.add('hidden'); // Hide crop button
         }
+    });
+
+    videoPreview.addEventListener('loadedmetadata', () => {
+        cropOptionsBtn.disabled = false;
+        cropOptionsBtn.textContent = 'Opciones de Recorte';
     });
 
     // --- Cropping Modal Logic ---
