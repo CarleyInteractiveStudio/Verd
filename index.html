@@ -13,8 +13,24 @@
 </head>
 <body>
     <div class="container">
+        <div class="header-actions">
+            <a href="https://www.paypal.com/donate" target="_blank" class="donate-btn">Donar con PayPal</a>
+            <button type="button" id="premium-code-btn" class="key-btn">🔑</button>
+        </div>
         <h1><img src="VidSpri.png" alt="VidSpri Logo" class="logo"> VidSpri</h1>
         <p>Convierte tus videos de animaciones en hojas de sprites listas para usar.</p>
+
+        <!-- Premium Code Modal -->
+        <div id="premium-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-premium-btn">&times;</span>
+                <h2>Acceso Premium</h2>
+                <p>Introduce tu código premium para obtener procesamiento prioritario.</p>
+                <input type="text" id="premium-code-input" placeholder="Tu código de 8 dígitos...">
+                <button type="button" id="save-premium-code-btn">Guardar Código</button>
+                <p id="premium-status"></p>
+            </div>
+        </div>
 
         <form id="sprite-form">
             <div class="form-group">

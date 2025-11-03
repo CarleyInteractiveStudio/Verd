@@ -41,6 +41,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearCropBtn = document.getElementById('clear-crop-btn');
     const cropModeTitle = document.getElementById('crop-mode-title');
 
+    // Premium Modal elements
+    const premiumModal = document.getElementById('premium-modal');
+    const premiumCodeBtn = document.getElementById('premium-code-btn');
+    const closePremiumBtn = document.querySelector('.close-premium-btn');
+    const premiumCodeInput = document.getElementById('premium-code-input');
+    const savePremiumCodeBtn = document.getElementById('save-premium-code-btn');
+    const premiumStatus = document.getElementById('premium-status');
+
+
     let extractedFrames = []; // To store the extracted frame blobs
     const backendUrl = 'https://carley1234-vidspri.hf.space/remove-background/';
     let cropper = null;
@@ -48,6 +57,60 @@ document.addEventListener('DOMContentLoaded', () => {
     let eraseCoords = null;
     let currentCropMode = null; // 'crop' or 'erase'
     let bannerInterval = null;
+
+    // --- Premium Code Logic ---
+
+    // Show the modal
+    premiumCodeBtn.addEventListener('click', () => {
+        premiumModal.style.display = 'block';
+    });
+
+    // Hide the modal
+    closePremiumBtn.addEventListener('click', () => {
+        premiumModal.style.display = 'none';
+    });
+
+    // Hide modal if clicked outside
+    window.addEventListener('click', (event) => {
+        if (event.target == premiumModal) {
+            premiumModal.style.display = 'none';
+        }
+    });
+
+    // Save premium code to localStorage
+    savePremiumCodeBtn.addEventListener('click', () => {
+        const code = premiumCodeInput.value.trim();
+        if (code) {
+            localStorage.setItem('vidspri_premium_code', code);
+            updatePremiumStatus();
+            alert('Código premium guardado.');
+            premiumModal.style.display = 'none';
+        } else {
+            // Clear the code if the input is empty
+            localStorage.removeItem('vidspri_premium_code');
+            updatePremiumStatus();
+            alert('Código premium eliminado.');
+        }
+    });
+
+    // Check for saved premium code on load
+    function updatePremiumStatus() {
+        const savedCode = localStorage.getItem('vidspri_premium_code');
+        if (savedCode) {
+            premiumStatus.textContent = 'PREMIUM';
+            premiumStatus.style.color = 'gold';
+            premiumCodeBtn.classList.add('premium-active');
+        } else {
+            premiumStatus.textContent = 'GRATIS';
+            premiumStatus.style.color = '#fff';
+            premiumCodeBtn.classList.remove('premium-active');
+        }
+    }
+
+    // Initial check on page load
+    document.addEventListener('DOMContentLoaded', updatePremiumStatus);
+    updatePremiumStatus(); // Also call it immediately for safety
+
 
     // --- Event Listeners ---
 
@@ -254,6 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const totalFrames = extractedFrames.length;
         const processedFrames = [];
+        const premiumCode = localStorage.getItem('vidspri_premium_code'); // Get premium code
 
         try {
             for (let i = 0; i < totalFrames; i++) {
@@ -262,6 +326,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const formData = new FormData();
                 formData.append('image', frameData.blob, `frame_${frameData.id}.png`);
+                if (premiumCode) {
+                    formData.append('premium_code', premiumCode); // Add code to the request
+                }
 
                 const response = await fetch(backendUrl, {
                     method: 'POST',
