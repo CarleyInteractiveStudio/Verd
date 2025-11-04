@@ -74,8 +74,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import os
+
 # --- Endpoints ---
-ADMIN_SECRET = "your_super_secret_key" # In a real app, use environment variables
+# The admin secret is loaded from an environment variable.
+# The application will fail to start if this is not set.
+ADMIN_SECRET = os.environ.get("ADMIN_SECRET")
+
+if not ADMIN_SECRET:
+    raise ValueError("ADMIN_SECRET environment variable not set. The application cannot start without it.")
 
 @app.post("/generate-code/")
 def generate_code(days: int, secret: str, conn: sqlite3.Connection = Depends(get_db)):
