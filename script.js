@@ -197,7 +197,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const image = document.getElementById('cropper-image');
         if (!image) return; // Safety check
 
-        cropper = new ImageCropper('#crop-area', image.src, {
+        const imageUrl = image.src; // Get the src from the existing image
+        cropArea.innerHTML = ''; // Clear the container to remove the static image
+
+        // Initialize the cropper, which will create its own image element in the container
+        cropper = new ImageCropper('#crop-area', imageUrl, {
             update_cb: (data) => {
                 // This callback saves data live as the user adjusts the cropper
                 if (mode === 'crop') {
