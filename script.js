@@ -143,6 +143,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function openModal() {
         cropModal.classList.remove('hidden');
         cropModal.style.display = 'flex';
+
+        // Take a snapshot of the current video frame and display it
+        const canvas = document.createElement('canvas');
+        canvas.width = videoPreview.videoWidth;
+        canvas.height = videoPreview.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(videoPreview, 0, 0, canvas.width, canvas.height);
+        const imageUrl = canvas.toDataURL();
+
+        const image = document.createElement('img');
+        image.id = 'cropper-image';
+        image.src = imageUrl;
+        image.style.maxWidth = '100%';
+        cropArea.innerHTML = ''; // Clear previous content
+        cropArea.appendChild(image);
     }
 
     function closeModal() {
@@ -173,43 +188,25 @@ document.addEventListener('DOMContentLoaded', () => {
             cropper.destroy();
             cropper = null;
         }
-        cropArea.innerHTML = ''; // Clear the area
 
         currentCropMode = mode;
         cropModeTitle.textContent = mode === 'crop'
             ? 'Editando: Área de Fotogramas'
             : 'Editando: Zona a Eliminar';
 
-        // Take a fresh snapshot
-        const canvas = document.createElement('canvas');
-        canvas.width = videoPreview.videoWidth;
-        canvas.height = videoPreview.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(videoPreview, 0, 0, canvas.width, canvas.height);
-        const imageUrl = canvas.toDataURL();
+        const image = document.getElementById('cropper-image');
+        if (!image) return; // Safety check
 
-        // Recreate the image element
-        const image = document.createElement('img');
-        image.id = 'cropper-image';
-        image.src = imageUrl;
-        image.style.maxWidth = '100%';
-
-        image.onload = () => {
-            cropArea.appendChild(image);
-            cropper = new ImageCropper('#crop-area', image.src, {
-                update_cb: (data) => {
-                    // This callback saves data live as the user adjusts the cropper
-                    if (mode === 'crop') {
-                        cropCoords = data;
-                    } else if (mode === 'erase') {
-                        eraseCoords = data;
-                    }
+        cropper = new ImageCropper('#crop-area', image.src, {
+            update_cb: (data) => {
+                // This callback saves data live as the user adjusts the cropper
+                if (mode === 'crop') {
+                    cropCoords = data;
+                } else if (mode === 'erase') {
+                    eraseCoords = data;
                 }
-            });
-        };
-
-        cropArea.innerHTML = ''; // Clear previous content before loading new image
-        cropArea.appendChild(image);
+            }
+        });
     }
 
     setCropAreaBtn.addEventListener('click', () => initializeCropper('crop'));
