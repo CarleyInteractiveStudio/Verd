@@ -235,7 +235,7 @@ button:disabled:hover {
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
 
 /* Estilos del Modal */
@@ -393,4 +393,108 @@ input[type="text"] {
 #premium-status {
     margin-top: 1rem;
     font-weight: bold;
+}
+
+/* --- Main Menu Styles --- */
+#main-menu {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    width: 100%;
+}
+
+.bubble-btn {
+    width: 200px;
+    height: 200px;
+    background: linear-gradient(145deg, #232323, #1a1a1a);
+    border: 4px solid #333;
+    border-radius: 50%;
+    color: #e0e0e0;
+    font-size: 1.2rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+}
+
+.bubble-btn:hover {
+    transform: translateY(-5px);
+    border-color: #03dac6;
+    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.4);
+}
+
+.bubble-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+    background: #2a2a2a;
+    border-color: #444;
+}
+
+.bubble-btn:disabled:hover {
+    transform: none;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+}
+
+
+/* --- General Modal Styles --- */
+.modal-content h2 {
+    margin-top: 0;
+    color: #03dac6;
+}
+
+.modal-content p {
+    color: #b0b0b0;
+    margin-bottom: 1.5rem;
+}
+
+.modal-content .actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+/* --- Ayuda Page Styles --- */
+.header {
+    width: 100%;
+    padding: 1rem 2rem;
+    background-color: #1e1e1e;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 100;
+}
+
+.header-content {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.back-btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background-color: #6200ea;
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+.back-btn:hover {
+    background-color: #3700b3;
+}
+
+.content-ayuda {
+    margin-top: 80px; /* Adjust based on header height */
+    padding: 2rem;
 }

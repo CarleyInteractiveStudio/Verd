@@ -46,68 +46,58 @@
             </div>
         </div>
 
-        <form id="sprite-form">
-            <div class="form-group">
-                <label for="video-file">1. Sube tu archivo de video:</label>
-                <input type="file" id="video-file" name="video_file" accept="video/*" required>
-            </div>
+        <!-- Main Menu -->
+        <div id="main-menu">
+            <button id="video-sprite-btn" class="bubble-btn">
+                <span>Generar Sprite a partir de Video</span>
+            </button>
+            <button id="image-sprite-btn" class="bubble-btn">
+                <span>Generar Sprite a partir de Imágenes</span>
+            </button>
+        </div>
 
-            <div id="video-preview-container" class="hidden">
-                <video id="video-preview" controls></video>
-                <div class="preview-controls">
-                    <button type="button" id="mark-start-btn">Marcar Inicio</button>
-                    <button type="button" id="mark-end-btn">Marcar Fin</button>
+        <!-- Video Processing Section -->
+        <div id="video-section" class="hidden">
+            <form id="sprite-form">
+                <div class="form-group">
+                    <label for="video-file">1. Sube tu archivo de video:</label>
+                    <input type="file" id="video-file" name="video_file" accept="video/*" required>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <button type="button" id="crop-options-btn" class="hidden" disabled>Cargando video...</button>
-            </div>
-
-            <!-- Modal de Recorte -->
-            <div id="crop-modal" class="modal hidden">
-                <div class="modal-content">
-                    <span class="close-btn">&times;</span>
-                    <h2>Opciones de Recorte</h2>
-                    <h3 id="crop-mode-title"></h3>
-                    <div id="crop-area">
-                        <!-- El cropper se adjuntará aquí -->
-                    </div>
-                    <div class="crop-buttons">
-                        <button type="button" id="set-crop-area-btn">Establecer Área de Fotogramas</button>
-                        <button type="button" id="set-erase-area-btn">Eliminar Zona (Marca de Agua)</button>
-                        <button type="button" id="apply-crop-btn">Aplicar</button>
-                        <button type="button" id="cancel-crop-btn">Cancelar</button>
-                        <button type="button" id="clear-crop-btn" class="secondary-btn">Limpiar Recorte</button>
+                <div id="video-preview-container" class="hidden">
+                    <video id="video-preview" controls></video>
+                    <div class="preview-controls">
+                        <button type="button" id="mark-start-btn">Marcar Inicio</button>
+                        <button type="button" id="mark-end-btn">Marcar Fin</button>
                     </div>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <label for="frames">2. Elige el número de fotogramas:</label>
-                <input type="number" id="frames" name="frames" min="1" max="100" value="12" required>
-            </div>
-
-            <div class="form-group">
-                <label>3. Selecciona el rango del video:</label>
-                <div class="time-range-controls">
-                    <input type="checkbox" id="full-video-checkbox" checked>
-                    <label for="full-video-checkbox">Usar video completo</label>
+                <div class="form-group">
+                    <label for="frames">2. Elige el número de fotogramas:</label>
+                    <input type="number" id="frames" name="frames" min="1" max="100" value="12" required>
                 </div>
-                <div id="time-range-inputs" class="hidden">
-                    <div class="time-input-group">
-                        <label for="start-time">Inicio (segundos):</label>
-                        <input type="number" id="start-time" name="start_time" min="0" step="0.1" value="0">
+
+                <div class="form-group">
+                    <label>3. Selecciona el rango del video:</label>
+                    <div class="time-range-controls">
+                        <input type="checkbox" id="full-video-checkbox" checked>
+                        <label for="full-video-checkbox">Usar video completo</label>
                     </div>
-                    <div class="time-input-group">
-                        <label for="end-time">Fin (segundos):</label>
-                        <input type="number" id="end-time" name="end_time" min="0" step="0.1">
+                    <div id="time-range-inputs" class="hidden">
+                        <div class="time-input-group">
+                            <label for="start-time">Inicio (segundos):</label>
+                            <input type="number" id="start-time" name="start_time" min="0" step="0.1" value="0">
+                        </div>
+                        <div class="time-input-group">
+                            <label for="end-time">Fin (segundos):</label>
+                            <input type="number" id="end-time" name="end_time" min="0" step="0.1">
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <button type="submit" id="extract-frames-btn">1. Extraer Fotogramas</button>
-        </form>
+                <button type="submit" id="extract-frames-btn">1. Extraer Fotogramas</button>
+            </form>
+        </div>
 
         <div id="frame-preview-container" class="hidden">
             <h2>Vista Previa de Fotogramas (haz clic para eliminar)</h2>
@@ -134,6 +124,29 @@
 
         <div id="error-message" class="hidden">
             <p>Lo sentimos, ha ocurrido un error. Por favor, inténtalo de nuevo.</p>
+        </div>
+
+        <!-- Generic Modal for Unavailable Features -->
+        <div id="unavailable-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-unavailable-btn">&times;</span>
+                <h2>Función no Disponible</h2>
+                <p>Esta función aún no está disponible, pero puedes ayudar a que lo esté muy pronto.</p>
+                <a href="ayuda.html" class="help-link">¿Cómo puedo ayudar?</a>
+            </div>
+        </div>
+
+        <!-- Share/Donate Modal -->
+        <div id="share-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-share-btn">&times;</span>
+                <h2>¿Te ha gustado la app?</h2>
+                <p>Ayúdanos a crecer compartiéndolo con tus amigos o dona para ayudar en la mejora del servidor y la app.</p>
+                <div class="share-buttons">
+                    <button id="share-app-btn">Compartir</button>
+                    <a href="https://www.paypal.com/donate/?hosted_button_id=SF9TB2TJLYL96" target="_blank" class="donate-link">Donar</a>
+                </div>
+            </div>
         </div>
     </div>
 
