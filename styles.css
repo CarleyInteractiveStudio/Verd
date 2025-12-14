@@ -252,7 +252,7 @@ input[type="number"] {
     height: 100%;
     overflow: auto;
     background-color: rgba(0, 0, 0, 0.7);
-    /* display: flex is now handled by JS to avoid pointer event issues */
+    display: flex;
     justify-content: center;
     align-items: center;
 }
@@ -384,12 +384,12 @@ input[type="number"] {
 }
 
 .download-btn {
-    background-color: #03a9f4; /* Un azul claro y moderno */
+    background-color: #4CAF50; /* Verde */
     color: white;
 }
 
 .download-btn:hover {
-    background-color: #0288d1;
+    background-color: #45a049;
 }
 
 .key-btn.active {
@@ -573,6 +573,8 @@ footer {
     border-color: #03dac6;
 }
 
-.download-option svg {
+.download-option svg, .download-option-logo {
     color: #03dac6;
+    width: 48px;
+    height: 48px;
 }
