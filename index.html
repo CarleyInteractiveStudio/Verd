@@ -29,7 +29,12 @@
                     }).render('#donate-button');
                 </script>
             </div>
-            <button type="button" id="premium-code-btn" class="key-btn">🔑</button>
+            <div>
+                <button type="button" id="download-app-btn-header" class="key-btn download-btn hidden-by-default">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                </button>
+                <button type="button" id="premium-code-btn" class="key-btn">🔑</button>
+            </div>
         </div>
         <h1><img src="VidSpri.png" alt="VidSpri Logo" class="logo"> VidSpri</h1>
         <p>Convierte tus videos de animaciones en hojas de sprites listas para usar.</p>
@@ -122,6 +127,7 @@
             <h2>¡Tu Hoja de Sprites está Lista!</h2>
             <img id="sprite-image" src="" alt="Hoja de sprites generada">
             <a id="download-link" href="" download="sprite.png">Descargar Hoja de Sprites</a>
+            <button type="button" id="download-app-btn-result" class="download-btn hidden-by-default" style="margin-top: 1rem;">Descargar la App</button>
         </div>
 
         <div id="error-message" class="hidden">
@@ -147,6 +153,25 @@
                 <div class="share-buttons">
                     <button id="share-app-btn">Compartir</button>
                     <a href="https://www.paypal.com/donate/?hosted_button_id=SF9TB2TJLYL96" target="_blank" class="donate-link">Donar</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Download App Modal -->
+        <div id="download-app-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-download-btn">&times;</span>
+                <h2>Descargar la App</h2>
+                <p>Obtén la mejor experiencia descargando la aplicación nativa para tu dispositivo.</p>
+                <div class="download-options">
+                    <a href="#" class="download-option">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3,4.3,6.7,2.1a2,2,0,0,0-2.8,2.8l2.2,3.6"/><path d="m14,8,3.6,2.2a2,2,0,0,1-2.8,2.8L11.2,9.4"/><path d="M12,12,9.4,11.2l-3.6-2.2a2,2,0,0,0-2.8,2.8l2.2,3.6"/><path d="m12,12,2.6,0.8,3.6,2.2a2,2,0,0,1-2.8,2.8l-2.2-3.6"/><path d="m12,12-0.8,2.6-2.2,3.6a2,2,0,0,0,2.8,2.8l3.6-2.2"/><path d="M12,12l0.8-2.6L16.4,2.1a2,2,0,0,1,2.8,2.8Z"/></svg>
+                        <span>Google Play Store</span>
+                    </a>
+                    <a href="#" class="download-option">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        <span>Descargar APK</span>
+                    </a>
                 </div>
             </div>
         </div>

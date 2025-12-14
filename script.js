@@ -51,8 +51,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeShareBtn = document.querySelector('.close-share-btn');
     const shareAppBtn = document.getElementById('share-app-btn');
 
+    // Download App Modal elements
+    const downloadAppModal = document.getElementById('download-app-modal');
+    const closeDownloadBtn = document.querySelector('.close-download-btn');
+    const downloadBtnHeader = document.getElementById('download-app-btn-header');
+    const downloadBtnResult = document.getElementById('download-app-btn-result');
+
     let extractedFrames = []; // To store the extracted frame blobs
     const backendUrl = 'https://carley1234-vidspri.hf.space/remove-background/';
+
+    // --- App Detection Logic ---
+    function showDownloadButtons() {
+        // This function is called if the app is running in a web browser
+        const buttons = document.querySelectorAll('.download-btn');
+        buttons.forEach(btn => btn.classList.remove('hidden-by-default'));
+    }
+
+    if (typeof window.esAppNativa === 'undefined') {
+        showDownloadButtons();
+    }
 
     // --- Main Menu Logic ---
 
@@ -116,6 +133,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target === shareModal) {
             shareModal.classList.add('hidden');
         }
+        if (event.target === downloadAppModal) {
+            downloadAppModal.classList.add('hidden');
+        }
     }
 
     window.addEventListener('click', closeModalOnClickOutside);
@@ -126,6 +146,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     closeShareBtn.addEventListener('click', () => {
         shareModal.classList.add('hidden');
+    });
+
+    closeDownloadBtn.addEventListener('click', () => {
+        downloadAppModal.classList.add('hidden');
+    });
+
+    downloadBtnHeader.addEventListener('click', () => {
+        downloadAppModal.classList.remove('hidden');
+    });
+
+    downloadBtnResult.addEventListener('click', () => {
+        downloadAppModal.classList.remove('hidden');
     });
 
     // --- Share Logic ---
