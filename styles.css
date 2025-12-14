@@ -392,6 +392,15 @@ input[type="number"] {
     background-color: #45a049;
 }
 
+/* Specificity override for the header download button */
+.key-btn.download-btn {
+    background-color: #4CAF50; /* Verde */
+}
+
+.key-btn.download-btn:hover {
+    background-color: #45a049;
+}
+
 .key-btn.active {
     border-color: #ffd700; /* Gold color for active state */
 }
@@ -573,7 +582,7 @@ footer {
     border-color: #03dac6;
 }
 
-.download-option svg, .download-option-logo {
+.download-option svg {
     color: #03dac6;
     width: 48px;
     height: 48px;
