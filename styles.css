@@ -388,6 +388,46 @@ input[type="number"] {
     color: white;
 }
 
+/* Styles for Image Animation Section */
+#image-animation-section h2 {
+    margin-bottom: 1.5rem;
+}
+
+#drag-drop-area {
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+#drag-drop-area:hover, #drag-drop-area.hover {
+    background-color: #f9f9f9;
+    border-color: #007bff;
+}
+
+#drag-drop-area.drag-over {
+    background-color: #e9ecef;
+    border-color: #0056b3;
+}
+
+#drag-drop-area input[type="file"] {
+    display: none;
+}
+
+#image-preview-container-anim {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+#image-preview-anim {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
 .download-btn:hover {
     background-color: #45a049;
 }

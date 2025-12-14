@@ -5,6 +5,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const videoSpriteBtn = document.getElementById('video-sprite-btn');
     const imageSpriteBtn = document.getElementById('image-sprite-btn');
 
+    // Image Animation Section elements
+    const imageAnimationSection = document.getElementById('image-animation-section');
+    const animationForm = document.getElementById('animation-form');
+    const dragDropArea = document.getElementById('drag-drop-area');
+    const imageFileInput = document.getElementById('image-file');
+    const imagePreviewContainerAnim = document.getElementById('image-preview-container-anim');
+    const imagePreviewAnim = document.getElementById('image-preview-anim');
+
     const form = document.getElementById('sprite-form');
     const videoFileInput = document.getElementById('video-file');
     const videoPreviewContainer = document.getElementById('video-preview-container');
@@ -83,7 +91,146 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     imageSpriteBtn.addEventListener('click', () => {
-        unavailableModal.classList.remove('hidden');
+        mainMenu.classList.add('hidden');
+        imageAnimationSection.classList.remove('hidden');
+    });
+
+    // --- Image Animation Logic ---
+
+    // Function to handle file selection (from both dialog and drop)
+    function handleImageFile(file) {
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreviewAnim.src = e.target.result;
+                imagePreviewContainerAnim.classList.remove('hidden');
+                dragDropArea.querySelector('p').style.display = 'none'; // Hide the text
+            };
+            reader.readAsDataURL(file);
+        } else {
+            showError('Por favor, selecciona un archivo de imagen válido (.png, .jpg).');
+            // Reset if invalid file
+            imagePreviewContainerAnim.classList.add('hidden');
+            dragDropArea.querySelector('p').style.display = 'block';
+        }
+    }
+
+    // Make the drag-drop area clickable to open the file dialog
+    dragDropArea.addEventListener('click', () => {
+        imageFileInput.click();
+    });
+
+    // Listen for file selection from the dialog
+    imageFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleImageFile(e.target.files[0]);
+        }
+    });
+
+    // Add drag-and-drop event listeners
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dragDropArea.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dragDropArea.addEventListener(eventName, () => {
+            dragDropArea.classList.add('drag-over');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dragDropArea.addEventListener(eventName, () => {
+            dragDropArea.classList.remove('drag-over');
+        }, false);
+    });
+
+    dragDropArea.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            handleImageFile(files[0]);
+        }
+    });
+
+    animationForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const imageFile = imageFileInput.files[0];
+        const animationPrompt = document.getElementById('animation-prompt').value;
+        const animationFrames = document.getElementById('animation-frames').value;
+
+        if (!imageFile || !animationPrompt) {
+            showError("Por favor, sube una imagen y escribe una descripción para la animación.");
+            return;
+        }
+
+        // Hide other sections and show progress
+        hideAllSections();
+        imageAnimationSection.classList.add('hidden');
+        progressContainer.classList.remove('hidden');
+        serverMessage.classList.remove('hidden'); // Show the "server is slow" message
+        bannerAdContainer.classList.remove('hidden');
+        progressText.textContent = "Generando video de animación... Esto puede tardar, ya que nuestro servidor de IA es gratuito.";
+        updateProgressBar(0); // Start progress bar
+
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        formData.append('prompt', animationPrompt);
+        formData.append('frames', animationFrames);
+
+        const animationServerUrl = '/generate-animation-video'; // Placeholder URL
+
+        try {
+            // Simulate progress while waiting for the server
+            updateProgressBar(30);
+
+            const response = await fetch(animationServerUrl, {
+                method: 'POST',
+                body: formData,
+            });
+
+            updateProgressBar(60);
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: `El servidor de animación devolvió un error.` }));
+                throw new Error(errorData.detail);
+            }
+
+            // --- Integration with existing sprite generation flow ---
+            const videoBlob = await response.blob();
+            progressText.textContent = "Video de animación recibido. Extrayendo fotogramas...";
+            updateProgressBar(70);
+
+            // Create a File object from the blob so we can reuse our functions
+            const videoFileFromAnimation = new File([videoBlob], "animation.mp4", { type: "video/mp4" });
+            const frameCount = parseInt(document.getElementById('animation-frames').value, 10);
+
+            // Reuse the frame extraction logic
+            const frames = await extractFramesFromVideo(videoFileFromAnimation, frameCount, 0, Infinity);
+            extractedFrames = frames.map((blob, index) => ({ id: index, blob }));
+
+            progressText.textContent = "Fotogramas extraídos. Preparando para generar el sprite...";
+            updateProgressBar(85);
+
+            // Display previews and trigger the final generation step
+            displayFramePreviews();
+            framePreviewContainer.classList.remove('hidden');
+
+            // Automatically trigger the background removal and sprite sheet generation
+            await generateSpriteBtn.click();
+
+            // The generateSpriteBtn function will handle hiding the progress container on its own.
+
+        } catch (error) {
+            // Ensure progress is hidden on error
+            progressContainer.classList.add('hidden');
+            serverMessage.classList.add('hidden');
+            bannerAdContainer.classList.add('hidden');
+            showError(`Error al generar la animación: ${error.message}`);
+        }
     });
 
     // --- Premium Code Logic ---
