@@ -3,6 +3,7 @@ body {
     background-color: #121212;
     color: #e0e0e0;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
@@ -19,6 +20,8 @@ body {
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     text-align: center;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
 }
 
 h1 {
@@ -180,7 +183,8 @@ input[type="number"] {
     flex: 1;
 }
 
-button {
+/* Generic button style for forms */
+#video-section button, .modal-content button {
     width: 100%;
     padding: 0.75rem;
     border: none;
@@ -193,17 +197,17 @@ button {
     transition: background-color 0.3s;
 }
 
-button:hover {
+#video-section button:hover, .modal-content button:hover {
     background-color: #3700b3;
 }
 
-button:disabled {
+#video-section button:disabled, .modal-content button:disabled {
     background-color: #333;
     color: #888;
     cursor: not-allowed;
 }
 
-button:disabled:hover {
+#video-section button:disabled:hover, .modal-content button:disabled:hover {
     background-color: #333; /* Keep the same color, no hover effect */
 }
 
@@ -397,48 +401,43 @@ input[type="text"] {
 
 /* --- Main Menu Styles --- */
 #main-menu {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    width: 100%;
+    margin-top: 2rem;
+}
+
+.menu-card {
+    background-color: #2a2a2a;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 2rem 1rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2rem;
-    width: 100%;
-}
-
-.bubble-btn {
-    width: 200px;
-    height: 200px;
-    background: linear-gradient(145deg, #232323, #1a1a1a);
-    border: 4px solid #333;
-    border-radius: 50%;
-    color: #e0e0e0;
-    font-size: 1.2rem;
-    font-weight: bold;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     text-align: center;
-    transition: all 0.3s ease;
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
 }
 
-.bubble-btn:hover {
+.menu-card:hover {
     transform: translateY(-5px);
     border-color: #03dac6;
-    box-shadow: 0 12px 20px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.3);
 }
 
-.bubble-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-    background: #2a2a2a;
-    border-color: #444;
+.menu-card svg {
+    margin-bottom: 1rem;
+    color: #03dac6;
 }
 
-.bubble-btn:disabled:hover {
-    transform: none;
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+.menu-card span {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #e0e0e0;
 }
 
 
@@ -497,4 +496,38 @@ input[type="text"] {
 .content-ayuda {
     margin-top: 80px; /* Adjust based on header height */
     padding: 2rem;
+}
+
+/* --- Footer Styles --- */
+footer {
+    width: 100%;
+    max-width: 500px;
+    margin: 2rem auto 0;
+    padding: 1rem 2rem 0.5rem;
+    border-top: 1px solid #333;
+    text-align: center;
+}
+
+.footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.footer-links a {
+    color: #b0b0b0;
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.2s ease;
+}
+
+.footer-links a:hover {
+    color: #03dac6;
+}
+
+.copyright {
+    color: #888;
+    font-size: 0.8rem;
 }
