@@ -57,6 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadBtnHeader = document.getElementById('download-app-btn-header');
     const downloadBtnResult = document.getElementById('download-app-btn-result');
 
+    // Footer buttons
+    const donateBtnFooter = document.getElementById('donate-btn-footer');
+    const shareBtnFooter = document.getElementById('share-btn-footer');
+
     let extractedFrames = []; // To store the extracted frame blobs
     const backendUrl = 'https://carley1234-vidspri.hf.space/remove-background/';
 
@@ -158,6 +162,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     downloadBtnResult.addEventListener('click', () => {
         downloadAppModal.classList.remove('hidden');
+    });
+
+    // --- Footer Buttons Logic ---
+    donateBtnFooter.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.open('https://www.paypal.com/donate/?hosted_button_id=SF9TB2TJLYL96', '_blank');
+    });
+
+    shareBtnFooter.addEventListener('click', (e) => {
+        e.preventDefault();
+        shareAppBtn.click(); // Simulate a click on the existing share button
     });
 
     // --- Share Logic ---
