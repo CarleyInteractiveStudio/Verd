@@ -584,3 +584,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// --- Google Translate Initialization ---
+function googleTranslateElementInit() {
+    new google.translate.TranslateElement({
+        pageLanguage: 'es',
+        includedLanguages: 'es,en,zh-CN,hi,pt,ru,fr,ar,bn,de,ja,ko,it,id,tr',
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+        autoDisplay: false
+    }, 'google_translate_element');
+}
