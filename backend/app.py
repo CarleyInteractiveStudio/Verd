@@ -83,8 +83,11 @@ async def generate_video(
         video_buffer = io.BytesIO()
 
         # Usamos imageio para escribir los fotogramas en el buffer como un video MP4.
-        # El parámetro fps (fotogramas por segundo) controla la velocidad de la animación.
-        imageio.mimwrite(video_buffer, np_frames, format="mp4", fps=10)
+        # Calculamos los FPS para asegurar que el video dure aproximadamente 2 segundos.
+        # Por ejemplo, para 25 fotogramas, fps = 25 / 2 = 12.5
+        # Usamos max(1, ...) para evitar un FPS de 0 si solo hay 1 fotograma.
+        fps = max(1, round(frames / 2))
+        imageio.mimwrite(video_buffer, np_frames, format="mp4", fps=fps)
 
         video_buffer.seek(0)
 

@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- ¡IMPORTANTE! ---
     // URL del servidor para generar animaciones. Debes reemplazarla con la URL de tu Space de Hugging Face.
-    const animationServerUrl = 'https://TU-URL-DE-HUGGINGFACE-SPACE.hf.space/generate-video/';
+    const animationServerUrl = 'https://carley1234-video.hf.space/generate-video/';
 
 
     // --- App Detection Logic ---
