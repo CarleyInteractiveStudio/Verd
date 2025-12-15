@@ -3,12 +3,15 @@ fastapi
 uvicorn
 python-multipart
 
-# Modelo de IA y procesamiento de imágenes
+# Modelo de IA y procesamiento
 torch
 diffusers
 transformers
-accelerate
 Pillow
 safetensors
 imageio
 imageio-ffmpeg
+
+# Dependencias adicionales para el modelo Zeroscope
+einops
+omegaconf
