@@ -68,7 +68,10 @@
             <form id="sprite-form">
                 <div class="form-group">
                     <label for="video-file">1. Sube tu archivo de video:</label>
-                    <input type="file" id="video-file" name="video_file" accept="video/*" required>
+                    <div id="drag-drop-area-video" class="drag-drop-area">
+                        <p>Arrastra y suelta tu video aquí o haz clic para seleccionar un archivo</p>
+                        <input type="file" id="video-file" name="video_file" accept="video/*" required>
+                    </div>
                 </div>
 
                 <div id="video-preview-container" class="hidden">

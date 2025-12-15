@@ -401,7 +401,7 @@ input[type="number"] {
     margin-bottom: 1.5rem;
 }
 
-#drag-drop-area {
+.drag-drop-area {
     border: 2px dashed #ccc;
     border-radius: 10px;
     padding: 2rem;
@@ -410,17 +410,17 @@ input[type="number"] {
     transition: background-color 0.3s, border-color 0.3s;
 }
 
-#drag-drop-area:hover, #drag-drop-area.hover {
+.drag-drop-area:hover, .drag-drop-area.hover {
     background-color: #f9f9f9;
     border-color: #007bff;
 }
 
-#drag-drop-area.drag-over {
+.drag-drop-area.drag-over {
     background-color: #e9ecef;
     border-color: #0056b3;
 }
 
-#drag-drop-area input[type="file"] {
+.drag-drop-area input[type="file"] {
     display: none;
 }
 

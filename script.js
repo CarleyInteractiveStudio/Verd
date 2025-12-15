@@ -75,6 +75,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let extractedFrames = []; // To store the extracted frame blobs
 
+    const dragDropAreaVideo = document.getElementById('drag-drop-area-video');
+
     // --- URLs de Servidores ---
     // URL del servidor para quitar el fondo de las imágenes
     const backgroundRemovalUrl = 'https://carley1234-vidspri.hf.space/remove-background/';
@@ -289,16 +291,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Video Processing Logic ---
 
-    videoFileInput.addEventListener('change', () => {
-        if (videoFileInput.files && videoFileInput.files[0]) {
-            const videoURL = URL.createObjectURL(videoFileInput.files[0]);
+    function handleVideoFile(file) {
+        if (file && file.type.startsWith('video/')) {
+            const videoURL = URL.createObjectURL(file);
             videoPreview.src = videoURL;
             videoPreview.load();
             videoPreviewContainer.classList.remove('hidden');
+            // Hide the drag-drop text and show the preview instead
+            dragDropAreaVideo.querySelector('p').style.display = 'none';
             framePreviewContainer.classList.add('hidden');
             resultContainer.classList.add('hidden');
         } else {
+            showError('Por favor, selecciona un archivo de video válido.');
             videoPreviewContainer.classList.add('hidden');
+            dragDropAreaVideo.querySelector('p').style.display = 'block';
+        }
+    }
+
+    videoFileInput.addEventListener('change', () => {
+        if (videoFileInput.files && videoFileInput.files[0]) {
+            handleVideoFile(videoFileInput.files[0]);
+        }
+    });
+
+    // Add drag-and-drop for video
+    dragDropAreaVideo.addEventListener('click', () => videoFileInput.click());
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dragDropAreaVideo.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dragDropAreaVideo.addEventListener(eventName, () => {
+            dragDropAreaVideo.classList.add('drag-over');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dragDropAreaVideo.addEventListener(eventName, () => {
+            dragDropAreaVideo.classList.remove('drag-over');
+        }, false);
+    });
+
+    dragDropAreaVideo.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            videoFileInput.files = files; // Assign dropped file to input
+            handleVideoFile(files[0]);
         }
     });
 
