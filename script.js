@@ -70,7 +70,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const shareBtnFooter = document.getElementById('share-btn-footer');
 
     let extractedFrames = []; // To store the extracted frame blobs
-    const backendUrl = 'https://carley1234-vidspri.hf.space/remove-background/';
+
+    // --- URLs de Servidores ---
+    // URL del servidor para quitar el fondo de las imágenes
+    const backgroundRemovalUrl = 'https://carley1234-vidspri.hf.space/remove-background/';
+
+    // --- ¡IMPORTANTE! ---
+    // URL del servidor para generar animaciones. Debes reemplazarla con la URL de tu Space de Hugging Face.
+    const animationServerUrl = 'https://TU-URL-DE-HUGGINGFACE-SPACE.hf.space/generate-video/';
+
 
     // --- App Detection Logic ---
     function showDownloadButtons() {
@@ -181,8 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('prompt', animationPrompt);
         formData.append('frames', animationFrames);
 
-        const animationServerUrl = '/generate-animation-video'; // Placeholder URL
-
         try {
             // Simulate progress while waiting for the server
             updateProgressBar(30);
@@ -219,10 +225,8 @@ document.addEventListener('DOMContentLoaded', () => {
             displayFramePreviews();
             framePreviewContainer.classList.remove('hidden');
 
-            // Automatically trigger the background removal and sprite sheet generation
-            await generateSpriteBtn.click();
-
-            // The generateSpriteBtn function will handle hiding the progress container on its own.
+            // Call the refactored function to handle the final processing steps
+            await processFramesAndGenerateSpriteSheet();
 
         } catch (error) {
             // Ensure progress is hidden on error
@@ -414,13 +418,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    generateSpriteBtn.addEventListener('click', async () => {
+    generateSpriteBtn.addEventListener('click', processFramesAndGenerateSpriteSheet);
+
+    // --- Refactored Sprite Generation Function ---
+    async function processFramesAndGenerateSpriteSheet() {
         if (extractedFrames.length === 0) {
             showError("No hay fotogramas para procesar.");
             return;
         }
 
         hideAllSections();
+        // Ensure progress container is visible for this stage if not already
         progressContainer.classList.remove('hidden');
         serverMessage.classList.remove('hidden');
         bannerAdContainer.classList.remove('hidden');
@@ -432,7 +440,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             for (let i = 0; i < totalFrames; i++) {
                 const frameData = extractedFrames[i];
-                progressText.textContent = `Procesando fotograma ${i + 1} de ${totalFrames}...`;
+                progressText.textContent = `Procesando fotograma ${i + 1} de ${totalFrames}... (Quitando fondo)`;
+                const progressPercentage = (i / totalFrames) * 100;
+                updateProgressBar(progressPercentage);
+
 
                 const formData = new FormData();
                 formData.append('image', frameData.blob, `frame_${frameData.id}.png`);
@@ -440,7 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     formData.append('premium_code', premiumCode);
                 }
 
-                const response = await fetch(backendUrl, {
+                const response = await fetch(backgroundRemovalUrl, {
                     method: 'POST',
                     body: formData,
                 });
@@ -452,14 +463,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const processedBlob = await response.blob();
                 processedFrames.push(processedBlob);
-
-                updateProgressBar(((i + 1) / totalFrames) * 100);
             }
 
+            updateProgressBar(100);
             progressText.textContent = "Creando la hoja de sprites final...";
             await createSpriteSheet(processedFrames);
             resultContainer.classList.remove('hidden');
-            shareModal.classList.remove('hidden'); // Show the share modal
+            shareModal.classList.remove('hidden');
 
         } catch (error) {
             showError(error.message);
@@ -468,7 +478,8 @@ document.addEventListener('DOMContentLoaded', () => {
             serverMessage.classList.add('hidden');
             bannerAdContainer.classList.add('hidden');
         }
-    });
+    }
+
 
     // --- Helper Functions ---
 

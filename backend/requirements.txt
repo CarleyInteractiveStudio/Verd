@@ -1,0 +1,14 @@
+# FastAPI y servidor
+fastapi
+uvicorn
+python-multipart
+
+# Modelo de IA y procesamiento de imágenes
+torch
+diffusers
+transformers
+accelerate
+Pillow
+safetensors
+imageio
+imageio-ffmpeg
