@@ -159,6 +159,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const dt = e.dataTransfer;
         const files = dt.files;
         if (files.length > 0) {
+            // Corregimos el bug: Asignamos el archivo arrastrado al input de archivo
+            imageFileInput.files = files;
+            // Ahora llamamos a la función que muestra la vista previa
             handleImageFile(files[0]);
         }
     });
