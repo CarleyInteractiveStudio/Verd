@@ -163,8 +163,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    animationForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
+    document.getElementById('generate-animation-btn').addEventListener('click', async () => {
+        // Prevent default form submission behavior if it's part of a form
+        animationForm.addEventListener('submit', e => e.preventDefault());
 
         const imageFile = imageFileInput.files[0];
         const animationPrompt = document.getElementById('animation-prompt').value;
