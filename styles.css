@@ -651,3 +651,19 @@ footer {
     width: 48px;
     height: 48px;
 }
+
+.donate-link-modal {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 12px 24px;
+    background-color: #ffd700;
+    color: #121212;
+    font-weight: bold;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background-color 0.3s;
+}
+
+.donate-link-modal:hover {
+    background-color: #f0c400;
+}

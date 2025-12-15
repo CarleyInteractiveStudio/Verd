@@ -65,6 +65,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadBtnHeader = document.getElementById('download-app-btn-header');
     const downloadBtnResult = document.getElementById('download-app-btn-result');
 
+    // Premium Feature Modal elements
+    const premiumFeatureModal = document.getElementById('premium-feature-modal');
+    const closePremiumFeatureBtn = document.querySelector('.close-premium-feature-btn');
+
     // Footer buttons
     const donateBtnFooter = document.getElementById('donate-btn-footer');
     const shareBtnFooter = document.getElementById('share-btn-footer');
@@ -74,10 +78,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- URLs de Servidores ---
     // URL del servidor para quitar el fondo de las imágenes
     const backgroundRemovalUrl = 'https://carley1234-vidspri.hf.space/remove-background/';
-
-    // --- ¡IMPORTANTE! ---
-    // URL del servidor para generar animaciones. Debes reemplazarla con la URL de tu Space de Hugging Face.
-    const animationServerUrl = 'https://carley1234-video.hf.space/generate-video/';
 
 
     // --- App Detection Logic ---
@@ -166,79 +166,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.getElementById('generate-animation-btn').addEventListener('click', async () => {
-        // Prevent default form submission behavior if it's part of a form
-        animationForm.addEventListener('submit', e => e.preventDefault());
-
-        const imageFile = imageFileInput.files[0];
-        const animationPrompt = document.getElementById('animation-prompt').value;
-        const animationFrames = document.getElementById('animation-frames').value;
-
-        if (!imageFile || !animationPrompt) {
-            showError("Por favor, sube una imagen y escribe una descripción para la animación.");
-            return;
-        }
-
-        // Hide other sections and show progress
-        hideAllSections();
-        imageAnimationSection.classList.add('hidden');
-        progressContainer.classList.remove('hidden');
-        serverMessage.classList.remove('hidden'); // Show the "server is slow" message
-        bannerAdContainer.classList.remove('hidden');
-        progressText.textContent = "Generando video de animación... Esto puede tardar, ya que nuestro servidor de IA es gratuito.";
-        updateProgressBar(0); // Start progress bar
-
-        const formData = new FormData();
-        formData.append('image', imageFile);
-        formData.append('prompt', animationPrompt);
-        formData.append('frames', animationFrames);
-
-        try {
-            // Simulate progress while waiting for the server
-            updateProgressBar(30);
-
-            const response = await fetch(animationServerUrl, {
-                method: 'POST',
-                body: formData,
-            });
-
-            updateProgressBar(60);
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ detail: `El servidor de animación devolvió un error.` }));
-                throw new Error(errorData.detail);
-            }
-
-            // --- Integration with existing sprite generation flow ---
-            const videoBlob = await response.blob();
-            progressText.textContent = "Video de animación recibido. Extrayendo fotogramas...";
-            updateProgressBar(70);
-
-            // Create a File object from the blob so we can reuse our functions
-            const videoFileFromAnimation = new File([videoBlob], "animation.mp4", { type: "video/mp4" });
-            const frameCount = parseInt(document.getElementById('animation-frames').value, 10);
-
-            // Reuse the frame extraction logic
-            const frames = await extractFramesFromVideo(videoFileFromAnimation, frameCount, 0, Infinity);
-            extractedFrames = frames.map((blob, index) => ({ id: index, blob }));
-
-            progressText.textContent = "Fotogramas extraídos. Preparando para generar el sprite...";
-            updateProgressBar(85);
-
-            // Display previews and trigger the final generation step
-            displayFramePreviews();
-            framePreviewContainer.classList.remove('hidden');
-
-            // Call the refactored function to handle the final processing steps
-            await processFramesAndGenerateSpriteSheet();
-
-        } catch (error) {
-            // Ensure progress is hidden on error
-            progressContainer.classList.add('hidden');
-            serverMessage.classList.add('hidden');
-            bannerAdContainer.classList.add('hidden');
-            showError(`Error al generar la animación: ${error.message}`);
-        }
+    document.getElementById('generate-animation-btn').addEventListener('click', () => {
+        premiumFeatureModal.classList.remove('hidden');
     });
 
     // --- Premium Code Logic ---
@@ -295,6 +224,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target === downloadAppModal) {
             downloadAppModal.classList.add('hidden');
         }
+        if (event.target === premiumFeatureModal) {
+            premiumFeatureModal.classList.add('hidden');
+        }
     }
 
     window.addEventListener('click', closeModalOnClickOutside);
@@ -309,6 +241,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     closeDownloadBtn.addEventListener('click', () => {
         downloadAppModal.classList.add('hidden');
+    });
+
+    closePremiumFeatureBtn.addEventListener('click', () => {
+        premiumFeatureModal.classList.add('hidden');
     });
 
     downloadBtnHeader.addEventListener('click', () => {
