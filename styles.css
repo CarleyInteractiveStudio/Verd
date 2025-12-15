@@ -428,6 +428,22 @@ input[type="number"] {
     border: 1px solid #ddd;
 }
 
+#animation-form textarea, #animation-form input[type="number"] {
+    width: 100%; /* Make them full-width to match the drag-drop area */
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+    box-sizing: border-box; /* Important for padding to not affect width */
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+#animation-form textarea:focus, #animation-form input[type="number"]:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.25);
+}
+
 .download-btn:hover {
     background-color: #45a049;
 }
