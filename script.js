@@ -101,6 +101,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- URLs de Servidores ---
     // URL del servidor para quitar el fondo de las imágenes
     const backgroundRemovalUrl = 'https://carley1234-vidspri.hf.space/remove-background/';
+    // URL del servidor para generar audio
+    const audioGenerationUrl = '/generate-audio/';
 
 
     // --- App Detection Logic ---
@@ -261,35 +263,58 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    generateSoundBtn.addEventListener('click', () => {
-        if (!soundPrompt.value.trim()) {
+    generateSoundBtn.addEventListener('click', async () => {
+        const prompt = soundPrompt.value.trim();
+        if (!prompt) {
             showError("Por favor, describe el sonido que quieres generar.");
             return;
         }
 
-        // --- Simulation Logic ---
         hideAllSections();
         progressContainer.classList.remove('hidden');
-        progressText.textContent = "Generando audio con IA...";
-        updateProgressBar(0);
+        progressText.textContent = "Conectando con el servidor...";
+        updateProgressBar(10); // Initial progress
 
         const duration = currentSoundType === 'effect' ? 5 : 30;
-        generationInfo.textContent = `Generando audio... (Duración máxima: ${duration}s). Esta es una función experimental.`;
+        generationInfo.textContent = `Generando audio... (Duración máxima: ${duration}s). Esto puede tardar un momento.`;
 
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += 10;
-            updateProgressBar(progress);
-            if (progress >= 100) {
-                clearInterval(interval);
-                progressContainer.classList.add('hidden');
-                audioResultContainer.classList.remove('hidden');
-                soundGenerationSection.classList.remove('hidden'); // Show the section again
-                // Here you would set the src of the audioPlayer to the real generated file
-                // For now, we leave it empty as it's just a UI demo.
-                audioPlayer.src = ''; // Placeholder
+        try {
+            progressText.textContent = "Generando audio con IA...";
+            updateProgressBar(50);
+
+            const response = await fetch(audioGenerationUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: prompt,
+                    duration: duration,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: 'Error desconocido del servidor.' }));
+                throw new Error(errorData.detail);
             }
-        }, 250);
+
+            progressText.textContent = "Cargando audio...";
+            updateProgressBar(90);
+
+            const audioBlob = await response.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            audioPlayer.src = audioUrl;
+
+            updateProgressBar(100);
+            progressContainer.classList.add('hidden');
+            audioResultContainer.classList.remove('hidden');
+            soundGenerationSection.classList.remove('hidden');
+
+        } catch (error) {
+            showError(`No se pudo generar el audio: ${error.message}`);
+            // Show the sound generation section again on error
+            soundGenerationSection.classList.remove('hidden');
+        }
     });
 
 
