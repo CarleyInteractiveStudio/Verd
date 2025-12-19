@@ -1,2 +1,1 @@
-# Verd
-ver pr dinero
+Vid Spri
