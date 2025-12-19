@@ -4,6 +4,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const videoSection = document.getElementById('video-section');
     const videoSpriteBtn = document.getElementById('video-sprite-btn');
     const imageSpriteBtn = document.getElementById('image-sprite-btn');
+    const soundGenerationBtn = document.getElementById('sound-generation-btn');
+
+    // Sound Generation Section elements
+    const soundGenerationSection = document.getElementById('sound-generation-section');
+    const soundTypeButtons = document.querySelectorAll('.sound-type-btn');
+    const soundPrompt = document.getElementById('sound-prompt');
+    const inspirationButtonsContainer = document.getElementById('inspiration-buttons');
+    const generateSoundBtn = document.getElementById('generate-sound-btn');
+    const audioResultContainer = document.getElementById('audio-result-container');
+    const generationInfo = document.getElementById('generation-info');
+    const audioPlayer = document.getElementById('audio-player');
+
 
     // Image Animation Section elements
     const imageAnimationSection = document.getElementById('image-animation-section');
@@ -104,6 +116,88 @@ document.addEventListener('DOMContentLoaded', () => {
         mainMenu.classList.add('hidden');
         imageAnimationSection.classList.remove('hidden');
     });
+
+    soundGenerationBtn.addEventListener('click', () => {
+        mainMenu.classList.add('hidden');
+        soundGenerationSection.classList.remove('hidden');
+        updateInspirationButtons(); // Initialize with default selection
+    });
+
+    // --- Sound Generation Logic ---
+
+    const inspirationData = {
+        effect: [
+            { text: 'Disparo Láser', prompt: 'Sonido de un disparo láser de ciencia ficción, agudo y rápido.' },
+            { text: 'Explosión', prompt: 'Una gran explosión retumbante con eco.' },
+            { text: 'Pasos en Grava', prompt: 'Sonido claro de pasos lentos caminando sobre grava.' },
+            { text: 'Puerta Chirriante', prompt: 'Una puerta de madera vieja y pesada que chirría al abrirse lentamente.' },
+            { text: 'Moneda Cayendo', prompt: 'Sonido metálico de una moneda cayendo sobre un suelo de baldosas.' }
+        ],
+        music: [
+            { text: 'Melodía Relajante', prompt: 'Una melodía de piano suave y lenta, perfecta para relajarse o estudiar.' },
+            { text: 'Ritmo de Acción', prompt: 'Música de percusión electrónica, enérgica y rápida, para una escena de acción.' },
+            { text: 'Sonido de Bosque', prompt: 'Ambiente de un bosque tranquilo con canto de pájaros y un arroyo cercano.' },
+            { text: 'Ambiente de Ciudad', prompt: 'Sonido de fondo de una ciudad bulliciosa con tráfico y sirenas lejanas.' },
+            { text: 'Música de Suspenso', prompt: 'Una melodía de cuerdas de bajo tono, lenta y llena de suspenso.' }
+        ]
+    };
+
+    let currentSoundType = 'effect'; // Default type
+
+    function updateInspirationButtons() {
+        inspirationButtonsContainer.innerHTML = '';
+        const buttonsData = inspirationData[currentSoundType];
+        buttonsData.forEach(data => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = data.text;
+            button.addEventListener('click', () => {
+                soundPrompt.value = data.prompt;
+            });
+            inspirationButtonsContainer.appendChild(button);
+        });
+    }
+
+    soundTypeButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            soundTypeButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            currentSoundType = button.dataset.type;
+            updateInspirationButtons();
+        });
+    });
+
+    generateSoundBtn.addEventListener('click', () => {
+        if (!soundPrompt.value.trim()) {
+            showError("Por favor, describe el sonido que quieres generar.");
+            return;
+        }
+
+        // --- Simulation Logic ---
+        hideAllSections();
+        progressContainer.classList.remove('hidden');
+        progressText.textContent = "Generando audio con IA...";
+        updateProgressBar(0);
+
+        const duration = currentSoundType === 'effect' ? 5 : 30;
+        generationInfo.textContent = `Generando audio... (Duración máxima: ${duration}s). Esta es una función experimental.`;
+
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 10;
+            updateProgressBar(progress);
+            if (progress >= 100) {
+                clearInterval(interval);
+                progressContainer.classList.add('hidden');
+                audioResultContainer.classList.remove('hidden');
+                soundGenerationSection.classList.remove('hidden'); // Show the section again
+                // Here you would set the src of the audioPlayer to the real generated file
+                // For now, we leave it empty as it's just a UI demo.
+                audioPlayer.src = ''; // Placeholder
+            }
+        }, 250);
+    });
+
 
     // --- Image Animation Logic ---
 
@@ -470,6 +564,9 @@ document.addEventListener('DOMContentLoaded', () => {
         errorMessage.classList.add('hidden');
         resultContainer.classList.add('hidden');
         framePreviewContainer.classList.add('hidden');
+        soundGenerationSection.classList.add('hidden');
+        videoSection.classList.add('hidden');
+        imageAnimationSection.classList.add('hidden');
     }
 
     function showError(message) {
