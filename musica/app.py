@@ -1,20 +1,25 @@
 
 import io
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from music_generator import generate_audio, load_model
 from pydantic import BaseModel
 
-app = FastAPI()
-
-# --- Model Loading on Startup ---
-@app.on_event("startup")
-async def startup_event():
+# --- Lifespan Management for Model Loading ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     """
-    Load the AI model when the application starts.
+    Manages the application's lifespan. The model is loaded on startup.
     """
+    print("Application startup...")
     load_model()
+    yield
+    # No cleanup is needed for this model.
+    print("Application shutdown.")
+
+app = FastAPI(lifespan=lifespan)
 
 # --- CORS Configuration for Hugging Face ---
 # Allow all origins to make this service accessible from any frontend.
