@@ -80,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Premium Feature Modal elements
     const premiumFeatureModal = document.getElementById('premium-feature-modal');
     const closePremiumFeatureBtn = document.querySelector('.close-premium-feature-btn');
+    const supportBtn = document.getElementById('support-btn');
 
     // Footer buttons
     const donateBtnFooter = document.getElementById('donate-btn-footer');
@@ -293,13 +294,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function updatePremiumStatus() {
         const savedCode = localStorage.getItem('vidspri_premium_code');
         if (savedCode) {
-            premiumStatus.textContent = 'PREMIUM';
-            premiumStatus.style.color = 'gold';
-            premiumCodeBtn.classList.add('premium-active');
+            premiumStatus.textContent = 'PRIORITARIO';
+            premiumStatus.style.color = '#03dac6'; // Match the theme color
         } else {
-            premiumStatus.textContent = 'GRATIS';
-            premiumStatus.style.color = '#fff';
-            premiumCodeBtn.classList.remove('premium-active');
+            premiumStatus.textContent = 'ESTÁNDAR';
+            premiumStatus.style.color = '#b0b0b0';
         }
     }
 
@@ -349,6 +348,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     downloadBtnResult.addEventListener('click', () => {
         downloadAppModal.classList.remove('hidden');
+    });
+
+    supportBtn.addEventListener('click', () => {
+        window.open('https://www.paypal.com/donate/?hosted_button_id=SF9TB2TJLYL96', '_blank');
     });
 
     // --- Footer Buttons Logic ---

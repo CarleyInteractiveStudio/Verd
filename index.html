@@ -16,39 +16,32 @@
 <body>
     <div class="container">
         <div class="header-actions">
-            <div id="donate-button-container">
-                <div id="donate-button"></div>
-                <script src="https://www.paypalobjects.com/donate/sdk/donate-sdk.js" charset="UTF-8"></script>
-                <script>
-                    PayPal.Donation.Button({
-                        env: 'production',
-                        hosted_button_id: 'SF9TB2TJLYL96',
-                        image: {
-                            src: 'https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif',
-                            alt: 'Donate with PayPal button',
-                            title: 'PayPal - The safer, easier way to pay online!',
-                        }
-                    }).render('#donate-button');
-                </script>
-            </div>
+            <button type="button" id="support-btn" class="header-btn pill-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-heart"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                <span>Apoyar</span>
+            </button>
             <div class="header-right-controls">
                 <div id="google_translate_element"></div>
-                <button type="button" id="download-app-btn-header" class="key-btn download-btn hidden-by-default">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <button type="button" id="download-app-btn-header" class="header-btn pill-btn download-btn hidden-by-default">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <span>Descargar</span>
                 </button>
-                <button type="button" id="premium-code-btn" class="key-btn">🔑</button>
+                <button type="button" id="premium-code-btn" class="header-btn pill-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                    <span>Canjear</span>
+                </button>
             </div>
         </div>
         <h1><img src="VidSpri.png" alt="VidSpri Logo" class="logo"> VidSpri</h1>
         <p>Convierte tus videos de animaciones en hojas de sprites listas para usar.</p>
 
-        <!-- Premium Code Modal -->
+        <!-- Priority Access Modal -->
         <div id="premium-modal" class="modal hidden">
             <div class="modal-content">
                 <span class="close-premium-btn">&times;</span>
-                <h2>Acceso Premium</h2>
-                <p>Introduce tu código premium para obtener procesamiento prioritario.</p>
-                <input type="text" id="premium-code-input" placeholder="Tu código de 8 dígitos...">
+                <h2>Acceso Prioritario</h2>
+                <p>Introduce tu código de acceso para obtener un procesamiento más rápido. Te enviamos este código como agradecimiento por tu apoyo.</p>
+                <input type="text" id="premium-code-input" placeholder="Tu código de acceso...">
                 <button type="button" id="save-premium-code-btn">Guardar Código</button>
                 <p id="premium-status"></p>
             </div>
