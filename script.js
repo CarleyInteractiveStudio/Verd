@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // URL del servidor para quitar el fondo de las imágenes
     const backgroundRemovalUrl = 'https://carley1234-vidspri.hf.space/remove-background/';
     // URL del servidor para generar audio
-    const audioGenerationUrl = '/generate-audio/';
+    const audioGenerationUrl = 'https://TU-ESPACIO-DE-MUSICA-EN-HF.hf.space/generate-audio/';
 
 
     // --- App Detection Logic ---
