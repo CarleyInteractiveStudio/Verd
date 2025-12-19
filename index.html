@@ -61,6 +61,10 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-music"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
                 <span>Generar Sonido con IA</span>
             </button>
+            <button id="text-to-sprite-btn" class="menu-card">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-wand"><path d="M13 2L3 12l5 5 10-10-5-5z"></path><path d="M22 22L12 12"></path></svg>
+                <span>Generar Sprite a partir de Texto</span>
+            </button>
         </div>
 
         <!-- Video Processing Section -->
@@ -163,6 +167,29 @@
                 <p id="generation-info"></p>
                 <audio id="audio-player" controls src=""></audio>
             </div>
+        </div>
+
+        <!-- Text to Sprite Section -->
+        <div id="text-to-sprite-section" class="hidden">
+            <h2>Generar Sprite a partir de Texto</h2>
+            <div class="form-group">
+                <label>1. Elige el tipo de video:</label>
+                <div class="sound-type-selector"> <!-- Reusing class for similar styling -->
+                    <button type="button" class="video-type-btn active" data-type="effect">Efecto</button>
+                    <button type="button" class="video-type-btn" data-type="animation">Animación</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="text-prompt">2. Describe el video que quieres crear:</label>
+                <textarea id="text-prompt" name="text_prompt" rows="4" placeholder="Ej: Una explosión de fuego, un personaje corriendo hacia la derecha..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>3. ¿Necesitas inspiración? Haz clic en una idea:</label>
+                <div id="video-inspiration-buttons" class="inspiration-grid">
+                    <!-- Buttons will be dynamically inserted here -->
+                </div>
+            </div>
+            <button type="button" id="generate-video-btn">Generar Video</button>
         </div>
 
         <div id="frame-preview-container" class="hidden">

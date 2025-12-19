@@ -5,6 +5,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const videoSpriteBtn = document.getElementById('video-sprite-btn');
     const imageSpriteBtn = document.getElementById('image-sprite-btn');
     const soundGenerationBtn = document.getElementById('sound-generation-btn');
+    const textToSpriteBtn = document.getElementById('text-to-sprite-btn');
+
+    // Text to Sprite Section elements
+    const textToSpriteSection = document.getElementById('text-to-sprite-section');
+    const videoTypeButtons = document.querySelectorAll('.video-type-btn');
+    const textPrompt = document.getElementById('text-prompt');
+    const videoInspirationButtonsContainer = document.getElementById('video-inspiration-buttons');
+    const generateVideoBtn = document.getElementById('generate-video-btn');
 
     // Sound Generation Section elements
     const soundGenerationSection = document.getElementById('sound-generation-section');
@@ -123,6 +131,91 @@ document.addEventListener('DOMContentLoaded', () => {
         soundGenerationSection.classList.remove('hidden');
         updateInspirationButtons(); // Initialize with default selection
     });
+
+    textToSpriteBtn.addEventListener('click', () => {
+        mainMenu.classList.add('hidden');
+        textToSpriteSection.classList.remove('hidden');
+        updateVideoInspirationButtons(); // Initialize with default selection
+    });
+
+    // --- Text to Sprite Logic ---
+
+    const videoInspirationData = {
+        effect: [
+            { text: 'Explosión de Fuego', prompt: 'Una explosión de fuego realista, con humo y chispas.' },
+            { text: 'Ataque de Rayo', prompt: 'Un rayo de energía azul brillante que golpea el suelo.' },
+            { text: 'Aura Mágica', prompt: 'Un aura de energía pulsante de color púrpura alrededor de un objeto.' }
+        ],
+        animation: [
+            { text: 'Correr a la Derecha', prompt: 'Un personaje de perfil corriendo hacia la derecha, estilo pixel art.' },
+            { text: 'Salto', prompt: 'Un personaje saltando en el sitio, con anticipación y aterrizaje.' },
+            { text: 'Ataque con Espada', prompt: 'Un personaje realizando un corte con la espada de izquierda a derecha.' }
+        ]
+    };
+
+    let currentVideoType = 'effect'; // Default type
+
+    function updateVideoInspirationButtons() {
+        videoInspirationButtonsContainer.innerHTML = '';
+        const buttonsData = videoInspirationData[currentVideoType];
+        buttonsData.forEach(data => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = data.text;
+            button.addEventListener('click', () => {
+                textPrompt.value = data.prompt;
+            });
+            videoInspirationButtonsContainer.appendChild(button);
+        });
+    }
+
+    videoTypeButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            videoTypeButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            currentVideoType = button.dataset.type;
+            updateVideoInspirationButtons();
+        });
+    });
+
+    generateVideoBtn.addEventListener('click', () => {
+        if (!textPrompt.value.trim()) {
+            showError("Por favor, describe el video que quieres generar.");
+            return;
+        }
+
+        // --- Simulation Logic ---
+        hideAllSections();
+        progressContainer.classList.remove('hidden');
+        progressText.textContent = "Generando video con IA...";
+        updateProgressBar(0);
+
+        const duration = currentVideoType === 'effect' ? 3 : 5;
+        // This is just for show, the actual video will have its own duration.
+
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 10;
+            updateProgressBar(progress);
+            if (progress >= 100) {
+                clearInterval(interval);
+                progressContainer.classList.add('hidden');
+
+                // --- Hand over to the existing video processing flow ---
+                // For now, using a placeholder. Replace with a real video URL when backend is ready.
+                // Using a generic placeholder video.
+                const sampleVideoUrl = 'https://www.w3schools.com/html/mov_bbb.mp4';
+                videoPreview.src = sampleVideoUrl;
+                videoPreview.load();
+
+                // Show the video processing section
+                videoSection.classList.remove('hidden');
+                videoPreviewContainer.classList.remove('hidden');
+                dragDropAreaVideo.querySelector('p').style.display = 'none';
+            }
+        }, 300);
+    });
+
 
     // --- Sound Generation Logic ---
 
@@ -570,6 +663,7 @@ document.addEventListener('DOMContentLoaded', () => {
         soundGenerationSection.classList.add('hidden');
         videoSection.classList.add('hidden');
         imageAnimationSection.classList.add('hidden');
+        textToSpriteSection.classList.add('hidden');
     }
 
     function showError(message) {

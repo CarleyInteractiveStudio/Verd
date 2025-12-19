@@ -736,9 +736,14 @@ footer {
     background-color: #373737 !important; /* Use important to override generic button style if needed */
 }
 
-.sound-type-btn.active {
+.sound-type-btn.active, .video-type-btn.active {
     background-color: #03dac6 !important;
     color: #121212 !important;
+}
+
+.video-type-btn {
+    flex-grow: 1;
+    background-color: #373737 !important;
 }
 
 .inspiration-grid {
