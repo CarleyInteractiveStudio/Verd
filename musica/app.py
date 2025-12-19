@@ -3,10 +3,18 @@ import io
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from music_generator import generate_audio
+from music_generator import generate_audio, load_model
 from pydantic import BaseModel
 
 app = FastAPI()
+
+# --- Model Loading on Startup ---
+@app.on_event("startup")
+async def startup_event():
+    """
+    Load the AI model when the application starts.
+    """
+    load_model()
 
 # --- CORS Configuration for Hugging Face ---
 # Allow all origins to make this service accessible from any frontend.
