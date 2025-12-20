@@ -665,13 +665,13 @@ footer {
     background-color: #f0c400;
 }
 
-/* --- Sound Generation Section Styles --- */
-#sound-generation-section h2 {
+/* --- AI Generation Section Styles (Sound & Text) --- */
+.ai-generation-section h2 {
     margin-bottom: 1.5rem;
     color: #ffffff;
 }
 
-#sound-generation-section textarea {
+.ai-generation-section textarea {
     width: 100%;
     padding: 0.75rem;
     border: 1px solid #333;
@@ -684,7 +684,7 @@ footer {
     resize: vertical;
 }
 
-#sound-generation-section button {
+.ai-generation-section button {
     width: 100%;
     padding: 0.75rem;
     border: none;
@@ -698,7 +698,7 @@ footer {
     margin-top: 0.5rem;
 }
 
-#sound-generation-section button:hover {
+.ai-generation-section button:hover {
     background-color: #3700b3;
 }
 
