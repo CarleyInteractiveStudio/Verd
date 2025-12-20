@@ -437,8 +437,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target === downloadAppModal) downloadAppModal.classList.add('hidden');
         if (event.target === premiumFeatureModal) premiumFeatureModal.classList.add('hidden');
 
-        // Close the action bubble if the click is outside of it and not on the download button
-        if (!actionBubble.classList.contains('hidden') && !actionBubble.contains(event.target) && event.target !== downloadBtnHeader && !downloadBtnHeader.contains(event.target)) {
+        // Close the action bubble if the click is outside of it and its trigger
+        if (!actionBubble.classList.contains('hidden') && !actionBubble.contains(event.target) && event.target !== downloadLink) {
             actionBubble.classList.add('hidden');
         }
     }
@@ -461,9 +461,8 @@ document.addEventListener('DOMContentLoaded', () => {
         premiumFeatureModal.classList.add('hidden');
     });
 
-    downloadBtnHeader.addEventListener('click', (event) => {
-        event.stopPropagation(); // Prevent the window click listener from firing immediately
-        actionBubble.classList.toggle('hidden');
+    downloadBtnHeader.addEventListener('click', () => {
+        downloadAppModal.classList.remove('hidden');
     });
 
     // The downloadBtnResult is removed, but we keep the listener to avoid errors if not cleaned up
@@ -808,6 +807,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Action Bubble Logic ---
+
+    downloadLink.addEventListener('click', (event) => {
+        event.stopPropagation();
+        actionBubble.classList.remove('hidden');
+    });
+
     bubbleDownloadBtn.addEventListener('click', () => {
         downloadAppModal.classList.remove('hidden'); // Open the modal directly
         actionBubble.classList.add('hidden');

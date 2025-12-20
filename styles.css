@@ -219,6 +219,11 @@ input[type="number"] {
     transition: background-color 0.3s;
 }
 
+.result-actions {
+    position: relative;
+    display: inline-block;
+}
+
 #download-link:hover {
     background-color: #018786;
 }
@@ -366,14 +371,11 @@ input[type="number"] {
 }
 
 /* --- Download Container & Action Bubble --- */
-.download-container {
-    position: relative;
-}
-
 .action-bubble {
     position: absolute;
-    bottom: calc(100% + 12px); /* Position it 12px above the button container */
-    right: 0;
+    bottom: calc(100% + 12px); /* Position it 12px above the trigger element */
+    left: 50%;
+    transform: translateX(-50%);
     width: 280px;
     background-color: #2a2a2a;
     border: 1px solid #444;
@@ -382,7 +384,7 @@ input[type="number"] {
     box-shadow: 0 4px 8px rgba(0,0,0,0.4);
     z-index: 10;
     text-align: left;
-    transform-origin: bottom right;
+    transform-origin: bottom center;
     animation: fadeInScale 0.2s ease-out;
 }
 
@@ -391,7 +393,8 @@ input[type="number"] {
     content: '';
     position: absolute;
     top: 100%; /* At the bottom of the bubble */
-    right: 20px; /* Align with the download button */
+    left: 50%;
+    transform: translateX(-50%);
     border-width: 8px;
     border-style: solid;
     border-color: #2a2a2a transparent transparent transparent;
