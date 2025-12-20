@@ -848,3 +848,51 @@ footer {
 #sprite-preview-section button:hover {
      background-color: #3700b3;
 }
+
+/* --- "Coming Soon" Ribbon and Tooltip Styles --- */
+.menu-card.coming-soon {
+    position: relative;
+    overflow: hidden; /* Keep the ribbon contained */
+}
+
+.ribbon {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 120px;
+    height: 120px;
+    overflow: hidden;
+    pointer-events: none; /* Allows clicks to go through to the card */
+}
+
+.ribbon span {
+    position: absolute;
+    display: block;
+    width: 170px;
+    padding: 8px 0;
+    background-color: #03dac6;
+    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+    color: #121212;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-align: center;
+    transform: rotate(45deg) translateY(-20px) translateX(30px);
+}
+
+/* Tooltip */
+.coming-soon[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 105%; /* Position above the card */
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    background-color: #2c2c2c;
+    border: 1px solid #444;
+    color: #e0e0e0;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none; /* Ensure it doesn't interfere with hover on the card itself */
+}
