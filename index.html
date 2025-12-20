@@ -83,6 +83,10 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-wand"><path d="M13 2L3 12l5 5 10-10-5-5z"></path><path d="M22 22L12 12"></path></svg>
                 <span>Generar Sprite a partir de Texto</span>
             </button>
+            <button id="sprite-preview-btn" class="menu-card">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-play-circle"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+                <span>Previsualizar Animación</span>
+            </button>
         </div>
 
         <!-- Video Processing Section -->
@@ -211,6 +215,33 @@
             <button type="button" id="generate-video-btn">Generar Video</button>
         </div>
 
+        <!-- Sprite Preview Section -->
+        <div id="sprite-preview-section" class="hidden">
+            <h2>Previsualizar Animación de Sprite</h2>
+            <div class="form-group">
+                <label for="sprite-file">1. Sube tu hoja de sprites:</label>
+                <div id="drag-drop-area-sprite" class="drag-drop-area modern">
+                    <p>Arrastra y suelta tu imagen aquí o haz clic para seleccionar</p>
+                    <input type="file" id="sprite-file" name="sprite_file" accept="image/png, image/jpeg" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="sprite-frames">2. Número de fotogramas:</label>
+                <div class="input-with-button">
+                    <input type="number" id="sprite-frames" name="sprite_frames" min="1" value="1">
+                    <button type="button" id="detect-frames-btn">Detección Automática</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="sprite-speed">3. Velocidad (FPS): <span id="speed-value">12</span></label>
+                <input type="range" id="sprite-speed" name="sprite_speed" min="1" max="60" value="12">
+            </div>
+            <div id="sprite-canvas-container">
+                <canvas id="sprite-canvas"></canvas>
+            </div>
+            <button type="button" id="play-pause-animation-btn">Reproducir</button>
+        </div>
+
         <div id="frame-preview-container" class="hidden">
             <h2>Vista Previa de Fotogramas (haz clic para eliminar)</h2>
             <div id="frames-output"></div>
@@ -231,8 +262,26 @@
         <div id="result-container" class="hidden">
             <h2>¡Tu Hoja de Sprites está Lista!</h2>
             <img id="sprite-image" src="" alt="Hoja de sprites generada">
-            <a id="download-link" href="" download="sprite.png">Descargar Hoja de Sprites</a>
-            <button type="button" id="download-app-btn-result" class="download-btn hidden-by-default" style="margin-top: 1rem;">Descargar la App</button>
+            <div class="result-actions">
+                <a id="download-link" href="" download="sprite.png">Descargar Hoja de Sprites</a>
+                <button type="button" id="preview-sprite-btn" class="secondary-btn">Ver una prevista</button>
+            </div>
+            <button type="button" id="download-app-btn-result" class="download-btn hidden-by-default">Descargar la App</button>
+        </div>
+
+        <!-- Sprite Preview Modal -->
+        <div id="sprite-preview-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-sprite-preview-btn">&times;</span>
+                <h2>Previsualización de Animación</h2>
+                <div id="modal-sprite-canvas-container" class="sprite-canvas-container">
+                     <canvas id="modal-sprite-canvas"></canvas>
+                </div>
+                <div class="form-group">
+                    <label for="modal-sprite-speed">Velocidad (FPS): <span id="modal-speed-value">12</span></label>
+                    <input type="range" id="modal-sprite-speed" name="modal_sprite_speed" min="1" max="60" value="12">
+                </div>
+            </div>
         </div>
 
         <div id="error-message" class="hidden">
