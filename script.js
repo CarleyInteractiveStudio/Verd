@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const imageSpriteBtn = document.getElementById('image-sprite-btn');
     const soundGenerationBtn = document.getElementById('sound-generation-btn');
     const textToSpriteBtn = document.getElementById('text-to-sprite-btn');
+    const spritePreviewBtn = document.getElementById('sprite-preview-btn');
 
     // Text to Sprite Section elements
     const textToSpriteSection = document.getElementById('text-to-sprite-section');
@@ -138,6 +139,11 @@ document.addEventListener('DOMContentLoaded', () => {
         mainMenu.classList.add('hidden');
         textToSpriteSection.classList.remove('hidden');
         updateVideoInspirationButtons(); // Initialize with default selection
+    });
+
+    spritePreviewBtn.addEventListener('click', () => {
+        mainMenu.classList.add('hidden');
+        spritePreviewSection.classList.remove('hidden');
     });
 
     // --- Text to Sprite Logic ---
@@ -804,7 +810,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Sprite Previewer Logic ---
-    const spritePreviewBtn = document.getElementById('sprite-preview-btn');
     const spritePreviewSection = document.getElementById('sprite-preview-section');
     const spriteFileInput = document.getElementById('sprite-file');
     const dragDropAreaSprite = document.getElementById('drag-drop-area-sprite');
