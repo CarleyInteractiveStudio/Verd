@@ -99,6 +99,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const dragDropAreaVideo = document.getElementById('drag-drop-area-video');
 
+    // Sprite Previewer Logic ---
+    const spritePreviewSection = document.getElementById('sprite-preview-section');
+    const spriteFileInput = document.getElementById('sprite-file');
+    const dragDropAreaSprite = document.getElementById('drag-drop-area-sprite');
+    const spriteFramesInput = document.getElementById('sprite-frames');
+    const detectFramesBtn = document.getElementById('detect-frames-btn');
+    const spriteSpeedInput = document.getElementById('sprite-speed');
+    const speedValue = document.getElementById('speed-value');
+    const spriteCanvas = document.getElementById('sprite-canvas');
+    const playPauseBtn = document.getElementById('play-pause-animation-btn');
+    const spriteCanvasContainer = document.getElementById('sprite-canvas-container');
+
     // --- URLs de Servidores ---
     // URL del servidor para quitar el fondo de las imágenes
     const backgroundRemovalUrl = 'https://carley1234-vidspri.hf.space/remove-background/';
@@ -119,32 +131,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Main Menu Logic ---
 
-    videoSpriteBtn.addEventListener('click', () => {
-        mainMenu.classList.add('hidden');
-        videoSection.classList.remove('hidden');
-    });
+    if (videoSpriteBtn) {
+        videoSpriteBtn.addEventListener('click', () => {
+            mainMenu.classList.add('hidden');
+            videoSection.classList.remove('hidden');
+        });
+    }
 
-    imageSpriteBtn.addEventListener('click', () => {
-        mainMenu.classList.add('hidden');
-        imageAnimationSection.classList.remove('hidden');
-    });
+    if (imageSpriteBtn) {
+        imageSpriteBtn.addEventListener('click', () => {
+            mainMenu.classList.add('hidden');
+            imageAnimationSection.classList.remove('hidden');
+        });
+    }
 
-    soundGenerationBtn.addEventListener('click', () => {
-        mainMenu.classList.add('hidden');
-        soundGenerationSection.classList.remove('hidden');
-        updateInspirationButtons(); // Initialize with default selection
-    });
+    if (soundGenerationBtn) {
+        soundGenerationBtn.addEventListener('click', () => {
+            mainMenu.classList.add('hidden');
+            soundGenerationSection.classList.remove('hidden');
+            updateInspirationButtons(); // Initialize with default selection
+        });
+    }
 
-    textToSpriteBtn.addEventListener('click', () => {
-        mainMenu.classList.add('hidden');
-        textToSpriteSection.classList.remove('hidden');
-        updateVideoInspirationButtons(); // Initialize with default selection
-    });
+    if (textToSpriteBtn) {
+        textToSpriteBtn.addEventListener('click', () => {
+            mainMenu.classList.add('hidden');
+            textToSpriteSection.classList.remove('hidden');
+            updateVideoInspirationButtons(); // Initialize with default selection
+        });
+    }
 
-    spritePreviewBtn.addEventListener('click', () => {
-        mainMenu.classList.add('hidden');
-        spritePreviewSection.classList.remove('hidden');
-    });
+    if (spritePreviewBtn) {
+        spritePreviewBtn.addEventListener('click', () => {
+            mainMenu.classList.add('hidden');
+            spritePreviewSection.classList.remove('hidden');
+        });
+    }
 
     // --- Text to Sprite Logic ---
 
@@ -470,9 +492,32 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadAppModal.classList.remove('hidden');
     });
 
-    downloadBtnResult.addEventListener('click', () => {
-        downloadAppModal.classList.remove('hidden');
-    });
+    if (downloadBtnResult) {
+        downloadBtnResult.addEventListener('click', () => {
+            downloadAppModal.classList.remove('hidden');
+        });
+    }
+
+    if (downloadBtnHeader) {
+        downloadBtnHeader.addEventListener('click', () => {
+            downloadAppModal.classList.remove('hidden');
+        });
+    }
+
+    if (previewSpriteBtn) {
+        previewSpriteBtn.addEventListener('click', () => {
+            if (generatedSprite.url && generatedSprite.frameCount > 0) {
+                modalAnimationState.image = new Image();
+                modalAnimationState.image.onload = () => {
+                    spritePreviewModal.classList.remove('hidden');
+                    startModalAnimation();
+                };
+                modalAnimationState.image.src = generatedSprite.url;
+            } else {
+                showError("No hay un sprite generado para previsualizar.");
+            }
+        });
+    }
 
     supportBtn.addEventListener('click', () => {
         window.open('https://www.paypal.com/donate/?hosted_button_id=SF9TB2TJLYL96', '_blank');
@@ -810,16 +855,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Sprite Previewer Logic ---
-    const spritePreviewSection = document.getElementById('sprite-preview-section');
-    const spriteFileInput = document.getElementById('sprite-file');
-    const dragDropAreaSprite = document.getElementById('drag-drop-area-sprite');
-    const spriteFramesInput = document.getElementById('sprite-frames');
-    const detectFramesBtn = document.getElementById('detect-frames-btn');
-    const spriteSpeedInput = document.getElementById('sprite-speed');
-    const speedValue = document.getElementById('speed-value');
-    const spriteCanvas = document.getElementById('sprite-canvas');
-    const playPauseBtn = document.getElementById('play-pause-animation-btn');
-    const spriteCanvasContainer = document.getElementById('sprite-canvas-container');
 
     let spriteImageSrc = null;
     let animationState = {
