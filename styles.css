@@ -484,11 +484,14 @@ input[type="text"] {
 
 /* --- Main Menu Styles --- */
 #main-menu {
+    width: 100%;
+    margin-top: 2rem;
+}
+
+.main-menu-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
-    width: 100%;
-    margin-top: 2rem;
 }
 
 .menu-card {
