@@ -952,7 +952,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.drawImage(
             img,
             sourceX, 0, frameWidth, frameHeight, // Source rectangle
-            0, 0, frameWidth, frameHeight      // Destination rectangle
+            0, 0, spriteCanvas.width, spriteCanvas.height      // Destination rectangle
         );
     }
 
@@ -1138,7 +1138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.drawImage(
             img,
             sourceX, 0, frameWidth, frameHeight,
-            0, 0, frameWidth, frameHeight
+            0, 0, modalSpriteCanvas.width, modalSpriteCanvas.height
         );
     }
 
