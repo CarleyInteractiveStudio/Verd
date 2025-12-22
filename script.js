@@ -355,14 +355,14 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.onload = (e) => {
                 imagePreviewAnim.src = e.target.result;
                 imagePreviewContainerAnim.classList.remove('hidden');
-                dragDropArea.querySelector('p').style.display = 'none'; // Hide the text
+                dragDropArea.classList.add('hidden'); // Hide the whole drop area
             };
             reader.readAsDataURL(file);
         } else {
             showError('Por favor, selecciona un archivo de imagen válido (.png, .jpg).');
             // Reset if invalid file
             imagePreviewContainerAnim.classList.add('hidden');
-            dragDropArea.querySelector('p').style.display = 'block';
+            dragDropArea.classList.remove('hidden');
         }
     }
 
@@ -549,13 +549,13 @@ document.addEventListener('DOMContentLoaded', () => {
             videoPreview.load();
             videoPreviewContainer.classList.remove('hidden');
             // Hide the drag-drop text and show the preview instead
-            dragDropAreaVideo.querySelector('p').style.display = 'none';
+            dragDropAreaVideo.classList.add('hidden');
             framePreviewContainer.classList.add('hidden');
             resultContainer.classList.add('hidden');
         } else {
             showError('Por favor, selecciona un archivo de video válido.');
             videoPreviewContainer.classList.add('hidden');
-            dragDropAreaVideo.querySelector('p').style.display = 'block';
+            dragDropAreaVideo.classList.remove('hidden');
         }
     }
 
