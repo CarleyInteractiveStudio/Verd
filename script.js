@@ -960,6 +960,16 @@ if (spriteFileInput) {
         speedValue.textContent = newFps;
     });
 
+    spriteFramesInput.addEventListener('input', () => {
+        // When the user changes the frame count, stop the animation and redraw the first frame
+        // to provide immediate visual feedback of the new dimensions.
+        stopAnimation();
+        animationState.frame = 0; // Reset to the first frame
+        drawFrame(0);
+        // Also update the info bubble
+        spriteFrameCountSpan.textContent = spriteFramesInput.value;
+    });
+
     playPauseBtn.addEventListener('click', () => {
         if (animationState.isPlaying) {
             stopAnimation();
@@ -1009,25 +1019,38 @@ if (spriteFileInput) {
 
     function drawFrame(frameIndex) {
         const img = animationState.image;
-        if (!img) return;
+        if (!img || !img.complete || img.naturalWidth === 0) {
+            // Don't draw if the image isn't loaded yet
+            return;
+        }
 
-        const frameCount = parseInt(spriteFramesInput.value, 10) || 1;
-        const frameWidth = img.width / frameCount;
-        const frameHeight = img.height;
+        const frameCount = parseInt(spriteFramesInput.value, 10);
+        if (isNaN(frameCount) || frameCount <= 0) {
+            // Don't draw if the frame count isn't a valid number
+            return;
+        }
 
-        // Resize canvas to match frame aspect ratio
+        // --- CORE FIX: Correctly calculate frame dimensions ---
+        const frameWidth = img.naturalWidth / frameCount;
+        const frameHeight = img.naturalHeight;
+
+        // --- CORE FIX: Set canvas size to the size of a SINGLE frame ---
         spriteCanvas.width = frameWidth;
         spriteCanvas.height = frameHeight;
 
         const ctx = spriteCanvas.getContext('2d');
-        ctx.clearRect(0, 0, spriteCanvas.width, spriteCanvas.height);
+        ctx.clearRect(0, 0, frameWidth, frameHeight);
 
+        // Calculate the starting X position of the desired frame in the spritesheet
         const sourceX = frameIndex * frameWidth;
 
+        // --- CORE FIX: Use the correct arguments for drawImage to clip the frame ---
         ctx.drawImage(
             img,
-            sourceX, 0, frameWidth, frameHeight, // Source rectangle
-            0, 0, spriteCanvas.width, spriteCanvas.height      // Destination rectangle
+            sourceX, 0,           // The X and Y coordinates of the top-left corner of the sub-rectangle (the frame to cut out) on the source image.
+            frameWidth, frameHeight, // The width and height of the sub-rectangle to cut out.
+            0, 0,                // The X and Y coordinates where to place the image on the canvas.
+            frameWidth, frameHeight  // The width and height to draw the image on the canvas.
         );
     }
 
@@ -1042,8 +1065,10 @@ if (spriteFileInput) {
         detectFramesBtn.disabled = true;
 
         try {
-            const frameCount = await countFramesByConnectivity(spriteImageSrc);
+            const frameCount = await countFramesByColumnScan(spriteImageSrc);
             spriteFramesInput.value = frameCount;
+            // Manually dispatch the event to trigger the feedback listener
+            spriteFramesInput.dispatchEvent(new Event('input'));
         } catch (error) {
             showError("No se pudo detectar los fotogramas. " + error.message);
         } finally {
@@ -1052,7 +1077,7 @@ if (spriteFileInput) {
         }
     });
 
-    async function countFramesByConnectivity(imageUrl) {
+    async function countFramesByColumnScan(imageUrl) {
         return new Promise((resolve, reject) => {
             const img = new Image();
             img.crossOrigin = "Anonymous";
@@ -1066,38 +1091,33 @@ if (spriteFileInput) {
                 try {
                     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                     const { data, width, height } = imageData;
-                    const visited = new Uint8Array(width * height);
-                    let count = 0;
+                    let frameCount = 0;
+                    let isInFrame = false;
 
-                    for (let y = 0; y < height; y++) {
-                        for (let x = 0; x < width; x++) {
-                            const index = (y * width + x);
-                            if (visited[index]) continue;
-
-                            // Check alpha channel (every 4th value)
-                            const alphaIndex = index * 4 + 3;
-                            if (data[alphaIndex] > 0) { // If pixel is not transparent
-                                count++;
-                                // Flood fill to mark all connected pixels as visited
-                                const stack = [[x, y]];
-                                while (stack.length > 0) {
-                                    const [px, py] = stack.pop();
-                                    const pIndex = (py * width + px);
-
-                                    if (px >= 0 && px < width && py >= 0 && py < height && !visited[pIndex] && data[pIndex * 4 + 3] > 0) {
-                                        visited[pIndex] = 1;
-                                        stack.push([px + 1, py]);
-                                        stack.push([px - 1, py]);
-                                        stack.push([px, py + 1]);
-                                        stack.push([px, py - 1]);
-                                    }
-                                }
+                    // Scan from left to right
+                    for (let x = 0; x < width; x++) {
+                        let isColumnTransparent = true;
+                        // Check every pixel in the current column
+                        for (let y = 0; y < height; y++) {
+                            const alpha = data[(y * width + x) * 4 + 3];
+                            if (alpha > 0) { // If any pixel in the column is not transparent
+                                isColumnTransparent = false;
+                                break;
                             }
                         }
+
+                        if (!isColumnTransparent && !isInFrame) {
+                            // We've entered a new frame
+                            isInFrame = true;
+                            frameCount++;
+                        } else if (isColumnTransparent && isInFrame) {
+                            // We've just left a frame
+                            isInFrame = false;
+                        }
                     }
-                    resolve(count > 0 ? count : 1);
+                    resolve(frameCount > 0 ? frameCount : 1); // Default to 1 if no frames are found
                 } catch (e) {
-                    reject(new Error("No se pudo analizar la imagen. Si es de otra web, descárgala y súbela desde tu dispositivo."));
+                     reject(new Error("No se pudo analizar la imagen. Si la imagen proviene de otra web, prueba a descargarla y subirla directamente desde tu dispositivo para evitar problemas de CORS."));
                 }
             };
             img.onerror = () => {

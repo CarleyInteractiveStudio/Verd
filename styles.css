@@ -835,8 +835,12 @@ footer {
 
 #sprite-canvas {
     max-width: 100%;
-    max-height: 100%; /* Respect container's max-height */
+    max-height: 100%;
     object-fit: contain;
+    /* --- CORE FIX: Ensure pixel art is not blurred when scaled up --- */
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: crisp-edges;
 }
 
 #sprite-preview-section button {
