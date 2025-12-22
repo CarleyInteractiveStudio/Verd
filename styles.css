@@ -957,3 +957,33 @@ footer {
 .secondary-button:hover {
     background-color: #4f4f4f;
 }
+
+/* --- Info Bubble Styles --- */
+.info-bubble {
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: -1rem; /* Pull it closer to the canvas */
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.info-bubble h3 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+    color: #03dac6;
+    font-size: 1rem;
+    border-bottom: 1px solid #444;
+    padding-bottom: 0.5rem;
+}
+
+.info-bubble p {
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+    color: #b0b0b0;
+}
+
+.info-bubble p strong {
+    color: #e0e0e0;
+}

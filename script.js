@@ -111,6 +111,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const playPauseBtn = document.getElementById('play-pause-animation-btn');
     const spriteCanvasContainer = document.getElementById('sprite-canvas-container');
     const downloadPreviewLink = document.getElementById('download-preview-link');
+    const infoBubble = document.getElementById('sprite-info-bubble');
+    const spriteDimensionsSpan = document.getElementById('sprite-dimensions');
+    const spriteFrameCountSpan = document.getElementById('sprite-frame-count');
+
 
     // --- URLs de Servidores ---
     // URL del servidor para quitar el fondo de las imágenes
@@ -842,6 +846,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Sprite Previewer Logic ---
 
+    window.addEventListener('load-generated-sprite', () => {
+        const url = sessionStorage.getItem('previewSpriteURL');
+        const frameCount = sessionStorage.getItem('previewSpriteFrameCount');
+
+        if (url && frameCount) {
+            spriteImageSrc = url;
+            spriteFramesInput.value = frameCount;
+
+            // Hide the drag & drop and show the animation
+            dragDropAreaSprite.classList.add('hidden');
+            spriteCanvasContainer.classList.remove('hidden');
+
+            // Update and show the download link
+            downloadPreviewLink.href = spriteImageSrc;
+            downloadPreviewLink.download = "generated_sprite.png";
+            downloadPreviewLink.style.display = 'inline-block';
+
+            stopAnimation();
+            animationState.image = new Image();
+            animationState.image.onload = () => {
+                // Update Info Bubble
+                spriteDimensionsSpan.textContent = `${animationState.image.width}px x ${animationState.image.height}px`;
+                spriteFrameCountSpan.textContent = frameCount;
+                infoBubble.classList.remove('hidden');
+
+                drawFrame(0); // Show the first frame immediately
+                startAnimation(); // Optionally, start playing right away
+            };
+            animationState.image.src = spriteImageSrc;
+        }
+    });
+
     let spriteImageSrc = null;
     let animationState = {
         isPlaying: false,
@@ -891,7 +927,9 @@ if (spriteFileInput) {
             const reader = new FileReader();
             reader.onload = e => {
                 spriteImageSrc = e.target.result;
-                dragDropAreaSprite.querySelector('p').textContent = file.name;
+                // Hide the drag & drop area and show the canvas
+                dragDropAreaSprite.classList.add('hidden');
+                spriteCanvasContainer.classList.remove('hidden');
 
                 // Update and show the download link
                 downloadPreviewLink.href = spriteImageSrc;
@@ -901,6 +939,12 @@ if (spriteFileInput) {
                 stopAnimation();
                 animationState.image = new Image();
                 animationState.image.onload = () => {
+                    const frameCount = spriteFramesInput.value || 1;
+                    // Update Info Bubble
+                    spriteDimensionsSpan.textContent = `${animationState.image.width}px x ${animationState.image.height}px`;
+                    spriteFrameCountSpan.textContent = frameCount; // Use value from input
+                    infoBubble.classList.remove('hidden');
+
                     // Set canvas to first frame preview
                     drawFrame(0);
                 };
@@ -1064,122 +1108,36 @@ if (spriteFileInput) {
     }
 
 
-    // --- Result Preview Modal Logic ---
+    // --- Result Preview Logic ---
     const previewSpriteBtn = document.getElementById('preview-sprite-btn');
-    const spritePreviewModal = document.getElementById('sprite-preview-modal');
-    const closeSpritePreviewBtn = document.querySelector('.close-sprite-preview-btn');
-    const modalSpriteCanvas = document.getElementById('modal-sprite-canvas');
-    const modalSpriteSpeed = document.getElementById('modal-sprite-speed');
-    const modalSpeedValue = document.getElementById('modal-speed-value');
-    const modalDownloadLink = document.getElementById('modal-download-link');
-    const modalBackBtn = document.getElementById('modal-back-btn');
 
     let generatedSprite = {
         url: null,
         frameCount: 0
     };
 
-    let modalAnimationState = {
-        isPlaying: false,
-        frame: 0,
-        fps: 12,
-        then: 0,
-        animationFrameId: null,
-        image: null
-    };
-
-    // Add new modal to the list of closable modals
-    function updatedCloseModalOnClickOutside(event) {
-        if (event.target === spritePreviewModal) {
-            stopModalAnimation();
-            spritePreviewModal.classList.add('hidden');
-        }
-        closeModalOnClickOutside(event); // Call original function
-    }
-    window.removeEventListener('click', closeModalOnClickOutside);
-    window.addEventListener('click', updatedCloseModalOnClickOutside);
-
-    closeSpritePreviewBtn.addEventListener('click', () => {
-        stopModalAnimation();
-        spritePreviewModal.classList.add('hidden');
-    });
-
     previewSpriteBtn.addEventListener('click', () => {
         if (generatedSprite.url && generatedSprite.frameCount > 0) {
-            modalDownloadLink.href = generatedSprite.url; // Set download link
-            modalAnimationState.image = new Image();
-            modalAnimationState.image.onload = () => {
-                spritePreviewModal.classList.remove('hidden');
-                startModalAnimation();
-            };
-            modalAnimationState.image.src = generatedSprite.url;
+            // Store data for the main previewer to access
+            sessionStorage.setItem('previewSpriteURL', generatedSprite.url);
+            sessionStorage.setItem('previewSpriteFrameCount', generatedSprite.frameCount);
+
+            // Navigate or show the main previewer
+            mainMenu.classList.add('hidden');
+            videoSection.classList.add('hidden');
+            spritePreviewSection.classList.remove('hidden');
+
+            // Scroll to the preview section smoothly
+            spritePreviewSection.scrollIntoView({ behavior: 'smooth' });
+
+            // Trigger a custom event to notify the previewer to load the new sprite
+            window.dispatchEvent(new Event('load-generated-sprite'));
+
         } else {
             showError("No hay un sprite generado para previsualizar.");
         }
     });
 
-    modalBackBtn.addEventListener('click', () => {
-        stopModalAnimation();
-        spritePreviewModal.classList.add('hidden');
-    });
-
-    modalSpriteSpeed.addEventListener('input', e => {
-        const newFps = parseInt(e.target.value, 10);
-        modalAnimationState.fps = newFps;
-        modalSpeedValue.textContent = newFps;
-    });
-
-    function startModalAnimation() {
-        modalAnimationState.isPlaying = true;
-        modalAnimationState.then = performance.now();
-        modalAnimationState.animationFrameId = requestAnimationFrame(animateModal);
-    }
-
-    function stopModalAnimation() {
-        modalAnimationState.isPlaying = false;
-        if (modalAnimationState.animationFrameId) {
-            cancelAnimationFrame(modalAnimationState.animationFrameId);
-        }
-    }
-
-    function animateModal(now) {
-        if (!modalAnimationState.isPlaying) return;
-
-        modalAnimationState.animationFrameId = requestAnimationFrame(animateModal);
-
-        const elapsed = now - modalAnimationState.then;
-        const fpsInterval = 1000 / modalAnimationState.fps;
-
-        if (elapsed > fpsInterval) {
-            modalAnimationState.then = now - (elapsed % fpsInterval);
-
-            drawModalFrame(modalAnimationState.frame);
-
-            modalAnimationState.frame = (modalAnimationState.frame + 1) % generatedSprite.frameCount;
-        }
-    }
-
-    function drawModalFrame(frameIndex) {
-        const img = modalAnimationState.image;
-        if (!img) return;
-
-        const frameWidth = img.width / generatedSprite.frameCount;
-        const frameHeight = img.height;
-
-        modalSpriteCanvas.width = frameWidth;
-        modalSpriteCanvas.height = frameHeight;
-
-        const ctx = modalSpriteCanvas.getContext('2d');
-        ctx.clearRect(0, 0, modalSpriteCanvas.width, modalSpriteCanvas.height);
-
-        const sourceX = frameIndex * frameWidth;
-
-        ctx.drawImage(
-            img,
-            sourceX, 0, frameWidth, frameHeight,
-            0, 0, modalSpriteCanvas.width, modalSpriteCanvas.height
-        );
-    }
 
     // Override original createSpriteSheet to store generated sprite info
     const originalCreateSpriteSheet = createSpriteSheet;
