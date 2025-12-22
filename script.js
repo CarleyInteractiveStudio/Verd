@@ -504,21 +504,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (previewSpriteBtn) {
-        previewSpriteBtn.addEventListener('click', () => {
-            if (generatedSprite.url && generatedSprite.frameCount > 0) {
-                modalAnimationState.image = new Image();
-                modalAnimationState.image.onload = () => {
-                    spritePreviewModal.classList.remove('hidden');
-                    startModalAnimation();
-                };
-                modalAnimationState.image.src = generatedSprite.url;
-            } else {
-                showError("No hay un sprite generado para previsualizar.");
-            }
-        });
-    }
-
     supportBtn.addEventListener('click', () => {
         window.open('https://www.paypal.com/donate/?hosted_button_id=SF9TB2TJLYL96', '_blank');
     });
