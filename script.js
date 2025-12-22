@@ -110,6 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const spriteCanvas = document.getElementById('sprite-canvas');
     const playPauseBtn = document.getElementById('play-pause-animation-btn');
     const spriteCanvasContainer = document.getElementById('sprite-canvas-container');
+    const downloadPreviewLink = document.getElementById('download-preview-link');
 
     // --- URLs de Servidores ---
     // URL del servidor para quitar el fondo de las imágenes
@@ -891,6 +892,12 @@ if (spriteFileInput) {
             reader.onload = e => {
                 spriteImageSrc = e.target.result;
                 dragDropAreaSprite.querySelector('p').textContent = file.name;
+
+                // Update and show the download link
+                downloadPreviewLink.href = spriteImageSrc;
+                downloadPreviewLink.download = file.name; // Set the original filename
+                downloadPreviewLink.style.display = 'inline-block';
+
                 stopAnimation();
                 animationState.image = new Image();
                 animationState.image.onload = () => {
@@ -1064,6 +1071,8 @@ if (spriteFileInput) {
     const modalSpriteCanvas = document.getElementById('modal-sprite-canvas');
     const modalSpriteSpeed = document.getElementById('modal-sprite-speed');
     const modalSpeedValue = document.getElementById('modal-speed-value');
+    const modalDownloadLink = document.getElementById('modal-download-link');
+    const modalBackBtn = document.getElementById('modal-back-btn');
 
     let generatedSprite = {
         url: null,
@@ -1097,6 +1106,7 @@ if (spriteFileInput) {
 
     previewSpriteBtn.addEventListener('click', () => {
         if (generatedSprite.url && generatedSprite.frameCount > 0) {
+            modalDownloadLink.href = generatedSprite.url; // Set download link
             modalAnimationState.image = new Image();
             modalAnimationState.image.onload = () => {
                 spritePreviewModal.classList.remove('hidden');
@@ -1106,6 +1116,11 @@ if (spriteFileInput) {
         } else {
             showError("No hay un sprite generado para previsualizar.");
         }
+    });
+
+    modalBackBtn.addEventListener('click', () => {
+        stopModalAnimation();
+        spritePreviewModal.classList.add('hidden');
     });
 
     modalSpriteSpeed.addEventListener('input', e => {
