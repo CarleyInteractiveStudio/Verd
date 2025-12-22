@@ -866,14 +866,10 @@ document.addEventListener('DOMContentLoaded', () => {
         image: null
     };
 
-    spritePreviewBtn.addEventListener('click', () => {
-        mainMenu.classList.add('hidden');
-        spritePreviewSection.classList.remove('hidden');
-    });
-
+if (dragDropAreaSprite) {
     dragDropAreaSprite.addEventListener('click', () => spriteFileInput.click());
 
-     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dragDropAreaSprite.addEventListener(eventName, e => {
             e.preventDefault();
             e.stopPropagation();
@@ -894,12 +890,15 @@ document.addEventListener('DOMContentLoaded', () => {
             handleSpriteFile(files[0]);
         }
     });
+}
 
+if (spriteFileInput) {
     spriteFileInput.addEventListener('change', e => {
         if (e.target.files && e.target.files[0]) {
             handleSpriteFile(e.target.files[0]);
         }
     });
+}
 
     function handleSpriteFile(file) {
         if (file && file.type.startsWith('image/')) {
