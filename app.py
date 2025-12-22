@@ -3,9 +3,13 @@ import io
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from rembg import remove
+from rembg import remove, new_session
 
 app = FastAPI()
+
+# --- Model Session ---
+# Create a session with the desired model
+session = new_session("isnet-anime")
 
 # --- CORS Configuration ---
 origins = [
@@ -28,7 +32,8 @@ async def remove_background(image: UploadFile = File(...)):
     """
     try:
         input_bytes = await image.read()
-        output_bytes = remove(input_bytes)
+        # Use the session to remove the background
+        output_bytes = remove(input_bytes, session=session)
         return StreamingResponse(io.BytesIO(output_bytes), media_type="image/png")
     except Exception as e:
         # Log the error for debugging purposes if you have a logging system
