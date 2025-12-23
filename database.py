@@ -1,382 +1,223 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VidSpri - Video to Sprite</title>
 
-    <!-- SEO y Social Media Meta Tags -->
-    <meta name="description" content="VidSpri: Crea hojas de sprites y animaciones para tus videojuegos en segundos">
+import sqlite3
+import string
+import random
 
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://carleyinteractivestudio.github.io/VidSpri/">
-    <meta property="og:title" content="VidSpri - Video to Sprite">
-    <meta property="og:description" content="VidSpri: Crea hojas de sprites y animaciones para tus videojuegos en segundos">
-    <meta property="og:image" content="https://carleyinteractivestudio.github.io/VidSpri/VidSpri.png">
+DATABASE_NAME = "database.db"
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://carleyinteractivestudio.github.io/VidSpri/">
-    <meta property="twitter:title" content="VidSpri - Video to Sprite">
-    <meta property="twitter:description" content="VidSpri: Crea hojas de sprites y animaciones para tus videojuegos en segundos">
-    <meta property="twitter:image" content="https://carleyinteractivestudio.github.io/VidSpri/VidSpri.png">
+def get_db_connection():
+    conn = sqlite3.connect(DATABASE_NAME)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-    <!-- Google Translate API -->
-    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="imagecrop.min.css">
-    <link rel="icon" href="VidSpri.png" type="image/png">
-    <!-- Google AdSense -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9270161527829251"
-     crossorigin="anonymous"></script>
-</head>
-<body>
-    <div class="container">
-        <div class="header-actions">
-            <button type="button" id="support-btn" class="header-btn pill-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-heart"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                <span>Apoyar</span>
-            </button>
-            <div class="header-right-controls">
-                <div id="google_translate_element"></div>
-                <button type="button" id="download-app-btn-header" class="header-btn pill-btn download-btn hidden-by-default">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    <span>Descargar</span>
-                </button>
-                <button type="button" id="premium-code-btn" class="header-btn pill-btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tag"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
-                    <span>Canjear</span>
-                </button>
-            </div>
-        </div>
-        <h1><img src="VidSpri.png" alt="VidSpri Logo" class="logo"> VidSpri</h1>
-        <p>Convierte tus videos de animaciones en hojas de sprites listas para usar.</p>
+def initialize_database():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS priority_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            uses_remaining INTEGER NOT NULL,
+            total_uses INTEGER NOT NULL
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS processing_jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            job_id TEXT UNIQUE NOT NULL,
+            status TEXT NOT NULL,
+            queue_position INTEGER NOT NULL,
+            is_priority BOOLEAN DEFAULT FALSE,
+            total_frames INTEGER NOT NULL,
+            completed_frames INTEGER DEFAULT 0
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS job_frames (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            job_id TEXT NOT NULL,
+            frame_order INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            image_data BLOB NOT NULL,
+            result_data BLOB,
+            FOREIGN KEY (job_id) REFERENCES processing_jobs (job_id)
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
-        <!-- Priority Access Modal -->
-        <div id="premium-modal" class="modal hidden">
-            <div class="modal-content">
-                <span class="close-premium-btn">&times;</span>
-                <h2>Acceso Prioritario</h2>
-                <p>Introduce tu código de acceso para obtener un procesamiento más rápido. Te enviamos este código como agradecimiento por tu apoyo.</p>
-                <input type="text" id="premium-code-input" placeholder="Tu código de acceso...">
-                <button type="button" id="save-premium-code-btn">Guardar Código</button>
-                <p id="premium-status"></p>
-            </div>
-        </div>
+# --- Code Management ---
 
-        <!-- Main Menu -->
-        <div id="main-menu">
-            <div class="main-menu-grid">
-                <button id="video-sprite-btn" class="menu-card">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-video"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
-                    <span>Generar Sprite a partir de Video</span>
-                </button>
-                <button id="image-sprite-btn" class="menu-card coming-soon" data-tooltip="Esta función aún no está disponible pero muy pronto con tu apoyo y crecimiento de la comunidad si lo estará">
-                    <div class="ribbon"><span>Muy pronto</span></div>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-image"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                    <span>Generar Sprite a partir de Imágenes</span>
-                </button>
-                <button id="sound-generation-btn" class="menu-card coming-soon" data-tooltip="Esta función aún no está disponible pero muy pronto con tu apoyo y crecimiento de la comunidad si lo estará">
-                    <div class="ribbon"><span>Muy pronto</span></div>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-music"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
-                    <span>Generar Sonido con IA</span>
-                </button>
-                <button id="text-to-sprite-btn" class="menu-card coming-soon" data-tooltip="Esta función aún no está disponible pero muy pronto con tu apoyo y crecimiento de la comunidad si lo estará">
-                    <div class="ribbon"><span>Muy pronto</span></div>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-wand"><path d="M13 2L3 12l5 5 10-10-5-5z"></path><path d="M22 22L12 12"></path></svg>
-                    <span>Generar Sprite a partir de Texto</span>
-                </button>
-            </div>
-            <div style="text-align: center; margin-top: 1.5rem;">
-                <button type="button" id="sprite-preview-btn" class="text-button">Previsualizar Animación</button>
-            </div>
-        </div>
+def generate_code(length=8):
+    characters = string.ascii_letters + string.digits
+    while True:
+        code = ''.join(random.choice(characters) for i in range(length))
+        conn = get_db_connection()
+        if conn.execute("SELECT code FROM priority_codes WHERE code = ?", (code,)).fetchone() is None:
+            conn.close()
+            return code
+        conn.close()
 
-        <!-- Video Processing Section -->
-        <div id="video-section" class="hidden">
-             <h2>Generar Sprite a partir de Video</h2>
-            <form id="sprite-form">
-                <div class="form-group">
-                    <label for="video-file">1. Sube tu archivo de video:</label>
-                    <div id="drag-drop-area-video" class="drag-drop-area modern">
-                        <p>Arrastra y suelta tu video aquí o haz clic para seleccionar un archivo</p>
-                        <input type="file" id="video-file" name="video_file" accept="video/*" required>
-                    </div>
-                </div>
+def add_code(code, uses):
+    conn = get_db_connection()
+    conn.execute("INSERT INTO priority_codes (code, uses_remaining, total_uses) VALUES (?, ?, ?)", (code, uses, uses))
+    conn.commit()
+    conn.close()
 
-                <div id="video-preview-container" class="hidden">
-                    <video id="video-preview" controls></video>
-                    <div class="time-range-controls modern">
-                        <button type="button" id="mark-start-btn">Marcar Inicio</button>
-                        <button type="button" id="mark-end-btn">Marcar Fin</button>
-                    </div>
-                </div>
+def get_all_codes():
+    """Retrieves all active priority codes."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT code, uses_remaining, total_uses FROM priority_codes ORDER BY id DESC")
+    codes = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in codes]
 
-                <div class="form-group">
-                    <label for="frames">2. Elige el número de fotogramas a extraer:</label>
-                    <input type="number" id="frames" name="frames" min="1" max="100" value="12" required>
-                </div>
+def delete_code(code):
+    """Deletes a priority code from the database."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM priority_codes WHERE code = ?", (code,))
+    conn.commit()
+    conn.close()
 
-                <div class="form-group">
-                    <label>3. Selecciona el rango del video (opcional):</label>
-                    <div class="time-range-selection">
-                        <input type="checkbox" id="full-video-checkbox" checked>
-                        <label for="full-video-checkbox" class="checkbox-label">Usar video completo</label>
-                    </div>
-                    <div id="time-range-inputs" class="hidden">
-                         <div class="time-input-group">
-                            <label for="start-time">Inicio (segundos)</label>
-                            <input type="number" id="start-time" name="start_time" min="0" step="0.1" value="0">
-                        </div>
-                        <div class="time-input-group">
-                            <label for="end-time">Fin (segundos)</label>
-                            <input type="number" id="end-time" name="end_time" min="0" step="0.1">
-                        </div>
-                    </div>
-                </div>
+def validate_code(code):
+    conn = get_db_connection()
+    result = conn.execute("SELECT uses_remaining FROM priority_codes WHERE code = ?", (code,)).fetchone()
+    conn.close()
+    return result and result['uses_remaining'] > 0
 
-                <button type="submit" id="extract-frames-btn">Extraer Fotogramas</button>
-            </form>
-        </div>
+def use_code(code):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT uses_remaining FROM priority_codes WHERE code = ?", (code,))
+    result = cursor.fetchone()
+    if result:
+        new_uses = result['uses_remaining'] - 1
+        if new_uses > 0:
+            cursor.execute("UPDATE priority_codes SET uses_remaining = ? WHERE code = ?", (new_uses, code))
+        else:
+            cursor.execute("DELETE FROM priority_codes WHERE code = ?", (code,))
+        conn.commit()
+    conn.close()
 
-        <!-- Image Animation Section -->
-        <div id="image-animation-section" class="hidden">
-            <h2>Crear Animación desde Imagen</h2>
-            <form id="animation-form">
-                <div class="form-group">
-                    <label for="image-file">1. Sube tu imagen (.png, .jpg, .jpeg):</label>
-                    <div id="drag-drop-area">
-                        <p>Arrastra y suelta tu imagen aquí o haz clic para seleccionar un archivo</p>
-                        <input type="file" id="image-file" name="image_file" accept="image/png, image/jpeg" required>
-                    </div>
-                    <div id="image-preview-container-anim" class="hidden">
-                        <img id="image-preview-anim" src="#" alt="Vista previa de la imagen" />
-                    </div>
-                </div>
+# --- Job and Frame Management ---
+# ... (rest of the file is unchanged)
+def add_job_and_frames(job_id, frames_data):
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-                <div class="form-group">
-                    <label for="animation-prompt">2. Describe en detalle la animación que deseas:</label>
-                    <textarea id="animation-prompt" name="animation_prompt" rows="5" placeholder="Mientras más detalles proporciones, mejor será el resultado. Por ejemplo: 'un personaje corriendo felizmente hacia la derecha, con un ciclo de caminata natural y enérgico.'" required></textarea>
-                </div>
+    # Calculate initial queue position
+    queue_position = cursor.execute("SELECT COUNT(*) FROM processing_jobs WHERE status IN ('queued', 'processing')").fetchone()[0] + 1
 
-                <div class="form-group">
-                    <label for="animation-frames">3. Elige el número de fotogramas para la animación:</label>
-                    <input type="number" id="animation-frames" name="animation_frames" min="1" max="100" value="12" required>
-                </div>
+    # Add the main job entry
+    cursor.execute(
+        "INSERT INTO processing_jobs (job_id, status, queue_position, total_frames) VALUES (?, ?, ?, ?)",
+        (job_id, "queued", queue_position, len(frames_data))
+    )
 
-                <button type="button" id="generate-animation-btn">Generar Video de Animación</button>
-            </form>
-        </div>
+    # Add all the frames
+    for i, frame_blob in enumerate(frames_data):
+        cursor.execute(
+            "INSERT INTO job_frames (job_id, frame_order, status, image_data) VALUES (?, ?, ?, ?)",
+            (job_id, i, "queued", frame_blob)
+        )
 
-        <!-- Sound Generation Section -->
-        <div id="sound-generation-section" class="hidden ai-generation-section">
-            <h2>Generar Sonido con IA</h2>
-            <div class="form-group">
-                <label>1. Elige el tipo de audio:</label>
-                <div class="sound-type-selector">
-                    <button type="button" class="sound-type-btn active" data-type="effect">Efecto</button>
-                    <button type="button" class="sound-type-btn" data-type="music">Sonido/Música</button>
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="sound-prompt">2. Describe el sonido que quieres crear:</label>
-                <textarea id="sound-prompt" name="sound_prompt" rows="4" placeholder="Ej: Viento suave soplando entre los árboles, una melodía de piano alegre y rápida..."></textarea>
-            </div>
-            <div class="form-group">
-                <label>3. ¿Necesitas inspiración? Haz clic en una idea:</label>
-                <div id="inspiration-buttons" class="inspiration-grid">
-                    <!-- Buttons will be dynamically inserted here -->
-                </div>
-            </div>
-            <button type="button" id="generate-sound-btn">Generar Audio</button>
-            <div id="audio-result-container" class="hidden" style="margin-top: 1.5rem;">
-                <p id="generation-info"></p>
-                <audio id="audio-player" controls src=""></audio>
-            </div>
-        </div>
+    conn.commit()
+    conn.close()
+    return queue_position
 
-        <!-- Text to Sprite Section -->
-        <div id="text-to-sprite-section" class="hidden ai-generation-section">
-            <h2>Generar Sprite a partir de Texto</h2>
-            <div class="form-group">
-                <label>1. Elige el tipo de video:</label>
-                <div class="sound-type-selector"> <!-- Reusing class for similar styling -->
-                    <button type="button" class="video-type-btn active" data-type="effect">Efecto</button>
-                    <button type="button" class="video-type-btn" data-type="animation">Animación</button>
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="text-prompt">2. Describe el video que quieres crear:</label>
-                <textarea id="text-prompt" name="text_prompt" rows="4" placeholder="Ej: Una explosión de fuego, un personaje corriendo hacia la derecha..."></textarea>
-            </div>
-            <div class="form-group">
-                <label>3. ¿Necesitas inspiración? Haz clic en una idea:</label>
-                <div id="video-inspiration-buttons" class="inspiration-grid">
-                    <!-- Buttons will be dynamically inserted here -->
-                </div>
-            </div>
-            <button type="button" id="generate-video-btn">Generar Video</button>
-        </div>
+def get_job_status(job_id):
+    conn = get_db_connection()
+    job = conn.execute("SELECT * FROM processing_jobs WHERE job_id = ?", (job_id,)).fetchone()
+    if not job:
+        conn.close()
+        return None
 
-        <!-- Sprite Preview Section -->
-        <div id="sprite-preview-section" class="hidden">
-            <h2>Previsualizar Animación de Sprite</h2>
-            <div class="form-group">
-                <label for="sprite-file">1. Sube tu hoja de sprites:</label>
-                <div id="drag-drop-area-sprite" class="drag-drop-area modern">
-                    <p>Arrastra y suelta tu imagen aquí o haz clic para seleccionar</p>
-                    <input type="file" id="sprite-file" name="sprite_file" accept="image/png, image/jpeg" required>
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="sprite-frames">2. Número de fotogramas:</label>
-                <div class="input-with-button">
-                    <input type="number" id="sprite-frames" name="sprite_frames" min="1" value="1">
-                    <button type="button" id="detect-frames-btn">Detección Automática</button>
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="sprite-speed">3. Velocidad (FPS): <span id="speed-value">12</span></label>
-                <input type="range" id="sprite-speed" name="sprite_speed" min="1" max="60" value="12">
-            </div>
-            <div id="sprite-canvas-container">
-                <canvas id="sprite-canvas"></canvas>
-            </div>
+    if job['status'] == 'completed':
+        frames = conn.execute("SELECT result_data FROM job_frames WHERE job_id = ? ORDER BY frame_order ASC", (job_id,)).fetchall()
+        conn.close()
+        return {'status': 'completed', 'frames': [f['result_data'] for f in frames]}
 
-            <!-- Info Bubble -->
-            <div id="sprite-info-bubble" class="info-bubble hidden">
-                <h3>Detalles del Sprite</h3>
-                <p><strong>Dimensiones:</strong> <span id="sprite-dimensions">N/A</span></p>
-                <p><strong>Fotogramas:</strong> <span id="sprite-frame-count">N/A</span></p>
-            </div>
+    conn.close()
+    return dict(job)
 
-            <div class="preview-actions">
-                <button type="button" id="play-pause-animation-btn">Reproducir</button>
-                <a id="download-preview-link" href="#" class="button-like" download="sprite.png" style="display: none;">Descargar Sprite</a>
-            </div>
-        </div>
+def get_next_frame_to_process():
+    conn = get_db_connection()
+    # Find the job with the lowest queue position that is not yet completed
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT jf.*
+        FROM job_frames jf
+        JOIN processing_jobs pj ON jf.job_id = pj.job_id
+        WHERE jf.status = 'queued' AND pj.queue_position > 0
+        ORDER BY pj.queue_position ASC, jf.frame_order ASC
+        LIMIT 1
+    """)
+    frame = cursor.fetchone()
+    conn.close()
+    return frame
 
-        <div id="frame-preview-container" class="hidden">
-            <h2>Vista Previa de Fotogramas (haz clic para eliminar)</h2>
-            <div id="frames-output"></div>
-            <button type="button" id="generate-sprite-btn">2. Quitar Fondo y Generar Sprite</button>
-        </div>
+def update_frame_as_completed(job_id, frame_order, result_data):
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-        <div id="progress-container" class="hidden">
-            <p id="progress-text">Procesando...</p>
-            <div class="progress-bar">
-                <div id="progress-bar-inner"></div>
-            </div>
-            <p id="server-message" class="hidden">Pronto nuestro servidor será más potente y no tendrás que esperar tanto.</p>
-            <div id="banner-ad-container" class="hidden">
-                <!-- Google AdSense will place a banner ad here -->
-            </div>
-        </div>
+    # Update the specific frame
+    cursor.execute(
+        "UPDATE job_frames SET status = 'completed', result_data = ? WHERE job_id = ? AND frame_order = ?",
+        (result_data, job_id, frame_order)
+    )
 
-        <div id="result-container" class="hidden">
-            <h2>¡Tu Hoja de Sprites está Lista!</h2>
-            <img id="sprite-image" src="" alt="Hoja de sprites generada">
-            <div class="result-actions">
-                <a id="download-link" href="" download="sprite.png">Descargar Hoja de Sprites</a>
-            </div>
-            <div style="text-align: center; margin-top: 1em;">
-                <button type="button" id="preview-sprite-btn" class="text-button">Previsualización de Sprite</button>
-            </div>
-        </div>
+    # Increment the completed_frames count on the main job
+    cursor.execute("UPDATE processing_jobs SET completed_frames = completed_frames + 1 WHERE job_id = ?", (job_id,))
 
-        <div id="queue-status-panel" class="hidden queue-panel">
-            <h2 id="queue-message">Tu solicitud está en la cola.</h2>
-            <p class="queue-info">Posición: <strong id="queue-position">--</strong></p>
-            <p class="queue-info">ID de Trabajo: <small id="job-id">--</small></p>
-            <div class="spinner-container">
-                <div id="spinner" class="spinner"></div>
-            </div>
-            
-            <div id="priority-code-section">
-                <p>¿Tienes un código prioritario? Úsalo para saltar la cola.</p>
-                <input type="text" id="priority-code-input" placeholder="Introduce tu código...">
-                <button type="button" id="apply-code-button">Usar Código</button>
-            </div>
-            <p id="code-message" class="code-message"></p>
-        </div>
+    # Check if the entire job is now complete
+    job = cursor.execute("SELECT total_frames, completed_frames FROM processing_jobs WHERE job_id = ?", (job_id,)).fetchone()
+    if job['completed_frames'] >= job['total_frames']:
+        cursor.execute("UPDATE processing_jobs SET status = 'completed', queue_position = 0 WHERE job_id = ?", (job_id,))
+        # Reorder the queue
+        cursor.execute("UPDATE processing_jobs SET queue_position = queue_position - 1 WHERE queue_position > (SELECT queue_position FROM processing_jobs WHERE job_id = ?)", (job_id,))
 
-        <div id="error-message" class="hidden">
-            <p>Lo sentimos, ha ocurrido un error. Por favor, inténtalo de nuevo.</p>
-        </div>
+    conn.commit()
+    conn.close()
 
-        <!-- Generic Modal for Unavailable Features -->
-        <div id="unavailable-modal" class="modal hidden">
-            <div class="modal-content">
-                <span class="close-unavailable-btn">&times;</span>
-                <h2>Función no Disponible</h2>
-                <p>Esta función aún no está disponible, pero puedes ayudar a que lo esté muy pronto.</p>
-                <a href="ayuda.html" class="help-link">¿Cómo puedo ayudar?</a>
-            </div>
-        </div>
+def update_frame_status(job_id, frame_order, status):
+    conn = get_db_connection()
+    conn.execute("UPDATE job_frames SET status = ? WHERE job_id = ? AND frame_order = ?", (status, job_id, frame_order))
+    conn.commit()
+    conn.close()
 
-        <!-- Share/Donate Modal -->
-        <div id="share-modal" class="modal hidden">
-            <div class="modal-content">
-                <span class="close-share-btn">&times;</span>
-                <h2>¿Te ha gustado la app?</h2>
-                <p>Ayúdanos a crecer compartiéndolo con tus amigos o dona para ayudar en la mejora del servidor y la app.</p>
-                <div class="share-buttons">
-                    <button id="share-app-btn">Compartir</button>
-                    <a href="https://www.paypal.com/donate/?hosted_button_id=SF9TB2TJLYL96" target="_blank" class="donate-link">Donar</a>
-                </div>
-            </div>
-        </div>
+def apply_priority_code_and_reorder(job_id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-        <!-- Download App Modal -->
-        <div id="download-app-modal" class="modal hidden">
-            <div class="modal-content">
-                <span class="close-download-btn">&times;</span>
-                <h2>Descargar la App</h2>
-                <p>Obtén la mejor experiencia descargando la aplicación nativa para tu dispositivo.</p>
-                <div class="download-options">
-                    <a href="#" class="download-option">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        <span>Google Play Store</span>
-                    </a>
-                    <a href="#" class="download-option">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        <span>Descargar APK</span>
-                    </a>
-                </div>
-            </div>
-        </div>
+    cursor.execute("SELECT queue_position, is_priority FROM processing_jobs WHERE queue_position > 0 ORDER BY queue_position ASC")
+    all_jobs = cursor.fetchall()
 
-        <!-- Premium Feature Modal -->
-        <div id="premium-feature-modal" class="modal hidden">
-            <div class="modal-content">
-                <span class="close-premium-feature-btn">&times;</span>
-                <h2>Función Premium Próximamente</h2>
-                <p>La capacidad de animar tus propias imágenes requiere servidores con GPU, que son muy costosos. ¡Tu donación puede ayudarnos a activar esta función para toda la comunidad!</p>
-                <p>Gracias por tu apoyo para hacer de VidSpri una herramienta cada vez más poderosa.</p>
-                <a href="https://www.paypal.com/donate/?hosted_button_id=SF9TB2TJLYL96" target="_blank" class="donate-link-modal">
-                    Donar para activar esta función
-                </a>
-            </div>
-        </div>
-    </div>
+    last_priority_pos = 0
+    for job in all_jobs:
+        if job['is_priority']:
+            last_priority_pos = job['queue_position']
 
-    <footer>
-        <div class="footer-links">
-            <a href="https://carleyinteractivestudio.github.io/Carley-Interactive-Studio/politica" target="_blank">Política</a>
-            <a href="https://www.facebook.com/share/g/1HXfptboi4/" target="_blank">Comunidad</a>
-            <a href="#" id="donate-btn-footer">Donar</a>
-            <a href="#" id="share-btn-footer">Compartir</a>
-            <a href="https://www.facebook.com/profile.php?id=61575555791348&rdid=ByhqDNyi4B4l0dFs&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F19ccrRy1kZ%2F#" target="_blank">Redes Sociales</a>
-            <a href="creditos.html" target="_blank">Crédito</a>
-            <a href="https://carleyinteractivestudio.github.io/Carley-Interactive-Studio/soporte" target="_blank">Soporte</a>
-        </div>
-        <div class="copyright">
-            © 2025 Carley Interactive Studio. Todos los derechos reservados.
-        </div>
-    </footer>
+    target_pos = max(1, last_priority_pos + 3)
+    if target_pos > len(all_jobs):
+        target_pos = len(all_jobs)
 
-    <script src="imagecrop.min.js"></script>
-    <script src="script.js"></script>
-</body>
-</html>
+    cursor.execute("UPDATE processing_jobs SET queue_position = queue_position + 1 WHERE queue_position >= ?", (target_pos,))
+    cursor.execute("UPDATE processing_jobs SET is_priority = TRUE, queue_position = ? WHERE job_id = ?", (target_pos, job_id))
+
+    # Re-normalize queue positions
+    cursor.execute("SELECT job_id FROM processing_jobs WHERE queue_position > 0 ORDER BY queue_position ASC")
+    sorted_jobs = cursor.fetchall()
+    for i, job in enumerate(sorted_jobs):
+        cursor.execute("UPDATE processing_jobs SET queue_position = ? WHERE job_id = ?", (i + 1, job['job_id']))
+
+    cursor.execute("SELECT queue_position FROM processing_jobs WHERE job_id = ?", (job_id,))
+    final_position = cursor.fetchone()['queue_position']
+
+    conn.commit()
+    conn.close()
+    return final_position
+
+# Initialize DB on import
+initialize_database()
