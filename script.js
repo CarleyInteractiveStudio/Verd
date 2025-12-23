@@ -152,8 +152,9 @@ document.addEventListener('DOMContentLoaded', () => {
     generateSpriteBtn.addEventListener('click', processFramesAndGenerateSpriteSheet);
 
     async function processFramesAndGenerateSpriteSheet() {
-        if (extractedFrames.length === 0) {
-            showError("No hay fotogramas para procesar.");
+        // FINAL VALIDATION: Double-check that the frames array is not empty before submitting.
+        if (!extractedFrames || extractedFrames.length === 0) {
+            showError("Error Crítico: No se encontraron fotogramas para enviar. Por favor, extrae los fotogramas de nuevo.");
             return;
         }
 
@@ -164,8 +165,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const formData = new FormData();
         extractedFrames.forEach((frameData, index) => {
-            // The server expects a field named "images". This correctly appends each frame blob to that field.
-            formData.append('images', frameData.blob);
+            // Definitive fix: Convert each Blob into a File object before appending.
+            // This makes the payload compliant with what FastAPI's multipart parser expects.
+            const frameFile = new File([frameData.blob], `frame_${index}.png`, { type: 'image/png' });
+            formData.append('images', frameFile);
         });
 
         try {
