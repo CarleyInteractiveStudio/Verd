@@ -113,6 +113,31 @@ document.addEventListener('DOMContentLoaded', () => {
     let jobPollingInterval = null;
     let mainJobId = null;
 
+    // --- Event Listener for Simulated Job Submission (for testing/rehydration) ---
+    document.addEventListener('jobSubmitted', () => {
+        const storedJobId = sessionStorage.getItem('jobId');
+        const totalFrames = sessionStorage.getItem('totalFrames');
+
+        if (storedJobId && totalFrames) {
+            mainJobId = storedJobId;
+
+            hideAllSections();
+            queueStatusPanel.classList.remove('hidden');
+
+            updateQueueStatusUI({
+                status: 'queued', // Assume it starts as queued
+                queue_position: '...', // Placeholder until first poll
+                completed_frames: 0,
+                total_frames: totalFrames
+            });
+
+            // Start polling immediately
+            if (jobPollingInterval) clearInterval(jobPollingInterval);
+            checkStatus(mainJobId); // Initial check
+            jobPollingInterval = setInterval(() => checkStatus(mainJobId), 5000);
+        }
+    });
+
     // --- Main Logic ---
 
     if (videoSpriteBtn) {

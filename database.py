@@ -17,7 +17,8 @@ def initialize_database():
         CREATE TABLE IF NOT EXISTS priority_codes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             code TEXT UNIQUE NOT NULL,
-            uses_remaining INTEGER NOT NULL
+            uses_remaining INTEGER NOT NULL,
+            total_uses INTEGER NOT NULL
         )
     ''')
     cursor.execute('''
@@ -59,7 +60,24 @@ def generate_code(length=8):
 
 def add_code(code, uses):
     conn = get_db_connection()
-    conn.execute("INSERT INTO priority_codes (code, uses_remaining) VALUES (?, ?)", (code, uses))
+    conn.execute("INSERT INTO priority_codes (code, uses_remaining, total_uses) VALUES (?, ?, ?)", (code, uses, uses))
+    conn.commit()
+    conn.close()
+
+def get_all_codes():
+    """Retrieves all active priority codes."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT code, uses_remaining, total_uses FROM priority_codes ORDER BY id DESC")
+    codes = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in codes]
+
+def delete_code(code):
+    """Deletes a priority code from the database."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM priority_codes WHERE code = ?", (code,))
     conn.commit()
     conn.close()
 
@@ -84,7 +102,7 @@ def use_code(code):
     conn.close()
 
 # --- Job and Frame Management ---
-
+# ... (rest of the file is unchanged)
 def add_job_and_frames(job_id, frames_data):
     conn = get_db_connection()
     cursor = conn.cursor()

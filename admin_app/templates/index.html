@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VidSpri Code Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div id="login-content">
+        <div class="login-box">
+            <h1>VidSpri Priority Code Manager</h1>
+            <p>Enter the server details to connect.</p>
+            <div class="api-settings">
+                <input type="text" id="api-url" placeholder="Server URL (e.g., https://...)">
+                <input type="password" id="api-key" placeholder="Admin API Key">
+                <button id="save-settings-button">Save & Connect</button>
+            </div>
+            <p id="login-error" class="error-message"></p>
+        </div>
+    </div>
+
+    <div id="main-content" style="display: none;">
+        <header>
+            <h1>VidSpri Priority Code Manager</h1>
+        </header>
+
+        <main>
+            <div class="card" id="create-code-panel">
+                <h2>Create New Code</h2>
+                <div class="form-group">
+                    <label for="uses-input">Number of Uses:</label>
+                    <input type="number" id="uses-input" value="100" min="1">
+                    <button id="create-code-button">Generate Code</button>
+                </div>
+                <p id="create-code-message" class="feedback-message"></p>
+            </div>
+
+            <div class="card">
+                <h2>Active Codes</h2>
+                <button id="refresh-codes-button">Refresh List</button>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Usage</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="codes-table-body">
+                        <!-- Codes will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='admin.js') }}"></script>
+</body>
+</html>
