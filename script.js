@@ -164,7 +164,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const formData = new FormData();
         extractedFrames.forEach((frameData, index) => {
-            formData.append('images', frameData.blob, `frame_${index}.png`);
+            // The server expects a field named "images". This correctly appends each frame blob to that field.
+            formData.append('images', frameData.blob);
         });
 
         try {
