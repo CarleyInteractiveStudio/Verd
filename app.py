@@ -1,32 +1,23 @@
 
 import io
-from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.responses import StreamingResponse
+import uuid
+import time
+import asyncio
+from typing import List
+from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
+from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from rembg import remove, new_session
+import database
 
 app = FastAPI()
 
-import database
-import secrets
-import time
-import asyncio
-from fastapi import BackgroundTasks, HTTPException
-
-# --- App Initialization ---
-# Initialize the database on startup
+# --- App Initialization & Model Session ---
 database.initialize_database()
-
-# --- Model Session ---
-# Create a session with the desired model
 session = new_session("isnet-anime")
 
 # --- CORS Configuration ---
-origins = [
-    "https://carleyinteractivestudio.github.io",
-    # You can add "http://localhost:8000" here for local testing if needed
-]
-
+origins = ["https://carleyinteractivestudio.github.io"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -35,19 +26,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-import uuid
+# --- API Endpoints ---
 
 @app.post("/remove-background/")
-async def queue_job(image: UploadFile = File(...)):
+async def queue_job(images: List[UploadFile] = File(...)):
     """
-    Accepts an image file, adds it to the processing queue,
+    Accepts multiple image files (frames), creates a single job,
     and returns a job ID and queue position.
     """
     try:
-        input_bytes = await image.read()
         job_id = str(uuid.uuid4())
+        frames_data = [await image.read() for image in images]
 
-        position = database.add_job(job_id, input_bytes)
+        position = database.add_job_and_frames(job_id, frames_data)
 
         return {"job_id": job_id, "queue_position": position, "status": "queued"}
 
@@ -57,23 +48,31 @@ async def queue_job(image: UploadFile = File(...)):
 @app.get("/status/{job_id}")
 def get_status(job_id: str):
     """
-    Retrieves the status and result of a processing job.
+    Retrieves the aggregated status of a processing job.
+    If completed, returns all processed frames.
     """
-    job = database.get_job_by_id(job_id)
-    if not job:
+    job_info = database.get_job_status(job_id)
+    if not job_info:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    if job['status'] == 'completed':
-        return StreamingResponse(io.BytesIO(job['result_data']), media_type="image/png")
+    if job_info['status'] == 'completed':
+        # This is a custom way to send multiple images back.
+        # We can't use StreamingResponse for multiple files easily.
+        # A real-world app might zip them, but for now, we send them as a list of data URLs.
+        return JSONResponse(content={
+            "status": "completed",
+            "frames": job_info['frames']
+        })
 
-    return {"job_id": job['job_id'], "status": job['status'], "queue_position": job['queue_position']}
+    return job_info
 
 @app.post("/apply-code")
 def apply_code(job_id: str, code: str):
     """
     Applies a priority code to an existing job.
     """
-    job = database.get_job_by_id(job_id)
+    # We get the job status to check its existence and current position
+    job = database.get_job_status(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
@@ -91,42 +90,35 @@ def apply_code(job_id: str, code: str):
     }
 
 # --- Background Worker ---
+
 async def process_queue():
     """
-    A worker that runs in the background to process jobs from the queue.
+    A worker that runs in the background to process individual frames from the queue.
     """
     while True:
-        job = database.get_next_job_in_queue()
-        if job:
+        frame_to_process = database.get_next_frame_to_process()
+        if frame_to_process:
+            job_id = frame_to_process['job_id']
+            frame_order = frame_to_process['frame_order']
             try:
-                print(f"Processing job: {job['job_id']}")
-                database.update_job_status_and_result(job['job_id'], "processing")
+                print(f"Processing frame {frame_order} for job {job_id}")
+                database.update_frame_status(job_id, frame_order, "processing")
 
-                # Perform the background removal
-                output_bytes = remove(job['image_data'], session=session)
+                output_bytes = remove(frame_to_process['image_data'], session=session)
 
-                database.update_job_status_and_result(job['job_id'], "completed", output_bytes)
-                database.reorder_queue_after_completion()
-                print(f"Finished job: {job['job_id']}")
+                database.update_frame_as_completed(job_id, frame_order, output_bytes)
+                print(f"Finished frame {frame_order} for job {job_id}")
             except Exception as e:
-                print(f"Error processing job {job['job_id']}: {e}")
-                database.update_job_status_and_result(job['job_id'], "failed")
+                print(f"Error processing frame {frame_order} for job {job_id}: {e}")
+                database.update_frame_status(job_id, frame_order, "failed")
         else:
-            # Wait for a bit before checking for new jobs
             await asyncio.sleep(5)
 
 @app.on_event("startup")
 async def startup_event():
-    """
-    Start the background worker when the application starts.
-    """
     print("Starting background worker...")
     asyncio.create_task(process_queue())
 
-# This is the root endpoint to confirm the server is running.
 @app.get("/")
 def read_root():
-    """
-    Root endpoint to confirm the server is running.
-    """
     return {"status": "VidSpri Backend is running"}

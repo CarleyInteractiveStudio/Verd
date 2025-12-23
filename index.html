@@ -285,6 +285,22 @@
             </div>
         </div>
 
+        <div id="queue-status-panel" class="hidden queue-panel">
+            <h2 id="queue-message">Tu solicitud está en la cola.</h2>
+            <p class="queue-info">Posición: <strong id="queue-position">--</strong></p>
+            <p class="queue-info">ID de Trabajo: <small id="job-id">--</small></p>
+            <div class="spinner-container">
+                <div id="spinner" class="spinner"></div>
+            </div>
+
+            <div id="priority-code-section">
+                <p>¿Tienes un código prioritario? Úsalo para saltar la cola.</p>
+                <input type="text" id="priority-code-input" placeholder="Introduce tu código...">
+                <button type="button" id="apply-code-button">Usar Código</button>
+            </div>
+            <p id="code-message" class="code-message"></p>
+        </div>
+
         <div id="error-message" class="hidden">
             <p>Lo sentimos, ha ocurrido un error. Por favor, inténtalo de nuevo.</p>
         </div>
