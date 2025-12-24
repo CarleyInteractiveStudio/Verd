@@ -40,20 +40,17 @@ app.add_middleware(
 # --- Public API Endpoints ---
 
 @app.post("/remove-background/")
-async def queue_job(request: Request):
+async def queue_job(images: List[UploadFile] = File(...)):
     try:
-        form_data = await request.form()
-        images = form_data.getlist("images")
-
         if not images:
-            raise HTTPException(status_code=400, detail="No images were provided in the 'images' field.")
+            # This check is slightly redundant as FastAPI would likely handle it, but it's good for clarity.
+            raise HTTPException(status_code=400, detail="No images were provided.")
 
         job_id = str(uuid.uuid4())
         frames_data = [await image.read() for image in images]
         position = database.add_job_and_frames(job_id, frames_data)
         return {"job_id": job_id, "queue_position": position, "status": "queued", "total_frames": len(frames_data), "completed_frames": 0}
     except Exception as e:
-        # It's good practice to log the actual error on the server
         print(f"An error occurred during job queuing: {e}")
         raise HTTPException(status_code=500, detail=f"Error queuing job: {str(e)}")
 
