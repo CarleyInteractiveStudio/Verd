@@ -28,7 +28,11 @@ def get_api_key(api_key: str = Depends(api_key_header)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
 
 # --- CORS Configuration ---
-origins = ["https://carleyinteractivestudio.github.io", "http://localhost:8002"] # Added localhost for local admin app
+origins = [
+    "https://carleyinteractivestudio.github.io", # User's GitHub Pages
+    "http://localhost:8002",                    # Local admin app
+    "https://carley1234-vidspri.hf.space"       # The live Hugging Face Space application
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
