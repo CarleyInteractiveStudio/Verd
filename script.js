@@ -61,7 +61,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const errorMessage = document.getElementById('error-message');
     const errorMessageParagraph = errorMessage.querySelector('p');
     const serverMessage = document.getElementById('server-message');
-    const bannerAdContainer = document.getElementById('banner-ad-container');
 
     // Premium Modal elements
     const premiumModal = document.getElementById('premium-modal');
@@ -671,7 +670,6 @@ document.addEventListener('DOMContentLoaded', () => {
         hideAllSections();
         progressContainer.classList.remove('hidden');
         serverMessage.classList.remove('hidden');
-        bannerAdContainer.classList.remove('hidden');
         progressText.textContent = "Enviando fotogramas al servidor...";
         updateProgressBar(0);
 
@@ -725,7 +723,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showError(error.message);
              progressContainer.classList.add('hidden');
              serverMessage.classList.add('hidden');
-             bannerAdContainer.classList.add('hidden');
         }
     }
 
@@ -770,14 +767,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     shareModal.classList.remove('hidden');
                     progressContainer.classList.add('hidden');
                     serverMessage.classList.add('hidden');
-                    bannerAdContainer.classList.add('hidden');
                 }
             } catch (error) {
                  clearInterval(intervalId);
                  showError(error.message);
                  progressContainer.classList.add('hidden');
                  serverMessage.classList.add('hidden');
-                 bannerAdContainer.classList.add('hidden');
             }
         }, 3000); // Poll every 3 seconds
     }
