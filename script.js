@@ -117,8 +117,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- URLs de Servidores ---
-    // URL del servidor para quitar el fondo de las imágenes
-    const backgroundRemovalUrl = 'https://carley1234-vidspri.hf.space/remove-background/';
+    const serverBaseUrl = 'https://carley1234-vidspri.hf.space';
+    const backgroundRemovalUrl = `${serverBaseUrl}/remove-background/`;
+    const applyCodeUrl = `${serverBaseUrl}/apply-code`;
+    const statusUrlBase = `${serverBaseUrl}/status/`;
     // URL del servidor para generar audio
     const audioGenerationUrl = 'https://TU-ESPACIO-DE-MUSICA-EN-HF.hf.space/generate-audio/';
 
@@ -667,56 +669,117 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         hideAllSections();
-        // Ensure progress container is visible for this stage if not already
         progressContainer.classList.remove('hidden');
         serverMessage.classList.remove('hidden');
         bannerAdContainer.classList.remove('hidden');
+        progressText.textContent = "Enviando fotogramas al servidor...";
+        updateProgressBar(0);
 
-        const totalFrames = extractedFrames.length;
-        const processedFrames = [];
-        const premiumCode = localStorage.getItem('vidspri_premium_code');
+        const formData = new FormData();
+        extractedFrames.forEach(frameData => {
+            formData.append('images', frameData.blob, `frame_${frameData.id}.png`);
+        });
 
         try {
-            for (let i = 0; i < totalFrames; i++) {
-                const frameData = extractedFrames[i];
-                progressText.textContent = `Procesando fotograma ${i + 1} de ${totalFrames}... (Quitando fondo)`;
-                const progressPercentage = (i / totalFrames) * 100;
-                updateProgressBar(progressPercentage);
+            // 1. Submit the job
+            const response = await fetch(backgroundRemovalUrl, {
+                method: 'POST',
+                body: formData,
+            });
 
-
-                const formData = new FormData();
-                formData.append('image', frameData.blob, `frame_${frameData.id}.png`);
-                if (premiumCode) {
-                    formData.append('premium_code', premiumCode);
-                }
-
-                const response = await fetch(backgroundRemovalUrl, {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({ detail: `Error del servidor en el fotograma ${i + 1}.` }));
-                    throw new Error(errorData.detail);
-                }
-
-                const processedBlob = await response.blob();
-                processedFrames.push(processedBlob);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: 'Error al enviar el trabajo al servidor.' }));
+                throw new Error(errorData.detail);
             }
 
-            updateProgressBar(100);
-            progressText.textContent = "Creando la hoja de sprites final...";
-            await createSpriteSheet(processedFrames);
-            resultContainer.classList.remove('hidden');
-            shareModal.classList.remove('hidden');
+            const jobData = await response.json();
+            const jobId = jobData.job_id;
+
+            progressText.textContent = `En cola en la posición #${jobData.queue_position}...`;
+
+            // 2. Apply premium code if it exists
+            const premiumCode = localStorage.getItem('vidspri_premium_code');
+            if (premiumCode) {
+                progressText.textContent = "Aplicando código prioritario...";
+                const codeFormData = new FormData();
+                codeFormData.append('job_id', jobId);
+                codeFormData.append('code', premiumCode);
+
+                const codeResponse = await fetch(applyCodeUrl, {
+                    method: 'POST',
+                    body: codeFormData
+                });
+                if (codeResponse.ok) {
+                    const codeResult = await codeResponse.json();
+                    progressText.textContent = `¡Éxito! Nueva posición en la cola: #${codeResult.new_queue_position}.`;
+                } else {
+                     progressText.textContent += " (El código no fue válido, continuando con prioridad estándar)";
+                }
+            }
+
+
+            // 3. Poll for status
+            await pollStatus(jobId);
 
         } catch (error) {
             showError(error.message);
-        } finally {
-            progressContainer.classList.add('hidden');
-            serverMessage.classList.add('hidden');
-            bannerAdContainer.classList.add('hidden');
+             progressContainer.classList.add('hidden');
+             serverMessage.classList.add('hidden');
+             bannerAdContainer.classList.add('hidden');
         }
+    }
+
+    async function pollStatus(jobId) {
+        const statusUrl = `${statusUrlBase}${jobId}`;
+        const intervalId = setInterval(async () => {
+            try {
+                const response = await fetch(statusUrl);
+                 if (!response.ok) {
+                    // Stop polling on server error
+                    clearInterval(intervalId);
+                    showError(`Error al obtener el estado del trabajo.`);
+                    return;
+                }
+                const data = await response.json();
+
+                if (data.status === 'queued') {
+                    progressText.textContent = `En cola en la posición #${data.queue_position}...`;
+                    updateProgressBar(5); // Small progress for being queued
+                } else if (data.status === 'processing') {
+                    const progress = data.total_frames > 0 ? (data.completed_frames / data.total_frames) * 100 : 0;
+                    progressText.textContent = `Procesando... (${data.completed_frames}/${data.total_frames} fotogramas completados)`;
+                    updateProgressBar(progress);
+                } else if (data.status === 'completed') {
+                    clearInterval(intervalId);
+                    progressText.textContent = "Trabajo completado. Creando la hoja de sprites...";
+                    updateProgressBar(100);
+
+                    // Decode base64 frames to blobs
+                    const processedBlobs = data.frames.map(base64String => {
+                        const byteCharacters = atob(base64String);
+                        const byteNumbers = new Array(byteCharacters.length);
+                        for (let i = 0; i < byteCharacters.length; i++) {
+                            byteNumbers[i] = byteCharacters.charCodeAt(i);
+                        }
+                        const byteArray = new Uint8Array(byteNumbers);
+                        return new Blob([byteArray], { type: 'image/png' });
+                    });
+
+                    await createSpriteSheet(processedBlobs);
+                    resultContainer.classList.remove('hidden');
+                    shareModal.classList.remove('hidden');
+                    progressContainer.classList.add('hidden');
+                    serverMessage.classList.add('hidden');
+                    bannerAdContainer.classList.add('hidden');
+                }
+            } catch (error) {
+                 clearInterval(intervalId);
+                 showError(error.message);
+                 progressContainer.classList.add('hidden');
+                 serverMessage.classList.add('hidden');
+                 bannerAdContainer.classList.add('hidden');
+            }
+        }, 3000); // Poll every 3 seconds
     }
 
 
