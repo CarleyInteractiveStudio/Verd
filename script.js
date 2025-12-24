@@ -178,8 +178,21 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ detail: 'Error del servidor al encolar el trabajo.' }));
-                throw new Error(errorData.detail);
+                // Improved error handling to get detailed server messages
+                let errorDetail = 'Error desconocido del servidor.';
+                try {
+                    const errorData = await response.json();
+                    // If the detail is an object/array, stringify it to see the full content
+                    if (typeof errorData.detail === 'object') {
+                        errorDetail = JSON.stringify(errorData.detail, null, 2);
+                    } else {
+                        errorDetail = errorData.detail;
+                    }
+                } catch (e) {
+                    // If the response is not JSON, get the raw text
+                    errorDetail = await response.text();
+                }
+                throw new Error(errorDetail);
             }
 
             const data = await response.json();
