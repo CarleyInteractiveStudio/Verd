@@ -6,6 +6,7 @@ import base64
 import httpx
 import threading
 import time
+from contextlib import asynccontextmanager
 from typing import List
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, status, Form
 from fastapi.responses import JSONResponse
@@ -18,8 +19,23 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize the FastAPI app
-app = FastAPI()
+# --- Lifespan Management ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan manager to start the background worker in a persistent thread.
+    This ensures the worker is started only once, preventing issues with
+    multiple Uvicorn workers on platforms like Hugging Face.
+    """
+    logger.info("Application startup: starting background worker.")
+    # Start the worker in a daemon thread.
+    worker_thread = threading.Thread(target=worker, daemon=True)
+    worker_thread.start()
+    yield
+    logger.info("Application shutdown.")
+
+# Initialize the FastAPI app with the lifespan manager
+app = FastAPI(lifespan=lifespan)
 
 # --- Configuration ---
 ESPECIALISTA_URL = "https://carley1234-vidspri.hf.space/remove-background/"
@@ -150,10 +166,3 @@ def worker():
 @app.get("/")
 def read_root():
     return {"status": "Secretario Service is running"}
-
-# --- Start Background Worker Thread ---
-# We start the worker in a daemon thread. This means the thread will exit
-# when the main program (the Uvicorn server) exits.
-worker_thread = threading.Thread(target=worker, daemon=True)
-worker_thread.start()
-logger.info("Background worker thread started.")
