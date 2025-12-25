@@ -5,6 +5,7 @@ import os
 import base64
 import httpx
 from typing import List
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, status, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,11 +17,37 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+# --- Background Task Management ---
+background_tasks = set()
+
+# --- Lifespan Management for Background Worker ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Start the background worker
+    logger.info("Application startup: starting worker.")
+    # Create a task that will run in the background
+    worker_task = asyncio.create_task(worker())
+    # Add the task to the set to keep a reference to it
+    background_tasks.add(worker_task)
+
+    yield
+
+    # Shutdown: Clean up the background tasks
+    logger.info("Application shutdown: stopping worker.")
+    for task in background_tasks:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            logger.info("Worker task cancelled successfully.")
+
+# Initialize FastAPI app with the lifespan manager
+app = FastAPI(lifespan=lifespan)
+
 
 # --- Configuration ---
-ESPECIALISTA_URL = os.environ.get("ESPECIALISTA_URL", "URL_DEL_ESPECIALISTA_AQUI/remove-background/")
-# Asegúrate de reemplazar "URL_DEL_ESPECIALISTA_AQUI" con la URL real de tu Hugging Face Space.
+# The URL of the specialist service is now correctly set to your HF Space.
+ESPECIALISTA_URL = "https://carley1234-vidspri.hf.space/remove-background/"
 
 # --- App Initialization ---
 database.initialize_database()
@@ -99,18 +126,21 @@ async def process_frame_remotely(image_data: bytes) -> bytes:
     async with httpx.AsyncClient(timeout=120.0) as client:
         files = {'file': ('image.png', image_data, 'image/png')}
         response = await client.post(ESPECIALISTA_URL, files=files)
-        response.raise_for_status()  # Will raise an exception for 4XX/5XX responses
+        response.raise_for_status()
         return response.content
 
 async def worker():
     """The main worker loop that processes jobs from the queue."""
-    logger.info("Worker started.")
+    logger.info("Worker started and is polling for jobs...")
     while True:
-        frame_to_process = await asyncio.to_thread(database.get_next_frame_to_process)
-        if frame_to_process:
-            job_id = frame_to_process['job_id']
-            frame_order = frame_to_process['frame_order']
-            try:
+        try:
+            # The database calls are synchronous, so we run them in a separate thread.
+            frame_to_process = await asyncio.to_thread(database.get_next_frame_to_process)
+
+            if frame_to_process:
+                job_id = frame_to_process['job_id']
+                frame_order = frame_to_process['frame_order']
+
                 job_info = await asyncio.to_thread(database.get_job_status, job_id)
                 if job_info and job_info['status'] == 'queued':
                     logger.info(f"Starting processing for job {job_id}")
@@ -121,16 +151,15 @@ async def worker():
                 await asyncio.to_thread(database.update_frame_as_completed, job_id, frame_order, output_bytes)
                 logger.info(f"Completed frame {frame_order} for job {job_id}")
 
-            except Exception as e:
-                logger.error(f"Error processing frame {frame_order} for job {job_id}: {e}")
-                await asyncio.to_thread(database.set_job_status, job_id, "failed")
-        else:
-            await asyncio.sleep(2)
+            else:
+                # If no job is found, wait for a short period before polling again.
+                await asyncio.sleep(2)
+        except Exception as e:
+            logger.error(f"An error occurred in the worker loop: {e}")
+            # In case of an unexpected error (e.g., DB connection issue),
+            # wait a bit longer before retrying to avoid spamming logs.
+            await asyncio.sleep(10)
 
-@app.on_event("startup")
-async def startup_event():
-    logger.info("Application startup...")
-    asyncio.create_task(worker())
 
 @app.get("/")
 def read_root():

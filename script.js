@@ -116,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- URLs de Servidores ---
-    const serverBaseUrl = 'https://carley1234-vidspri.hf.space';
+    const serverBaseUrl = 'https://carley1234-vidspri-secretario.hf.space';
     const backgroundRemovalUrl = `${serverBaseUrl}/remove-background/`;
     const applyCodeUrl = `${serverBaseUrl}/apply-code`;
     const statusUrlBase = `${serverBaseUrl}/status/`;
