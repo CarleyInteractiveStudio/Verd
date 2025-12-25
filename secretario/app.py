@@ -27,7 +27,11 @@ async def lifespan(app: FastAPI):
     This ensures the worker is started only once, preventing issues with
     multiple Uvicorn workers on platforms like Hugging Face.
     """
-    logger.info("Application startup: starting background worker.")
+    logger.info("Application startup...")
+    database.initialize_database()
+    logger.info("Database initialized.")
+
+    logger.info("Starting background worker.")
     # Start the worker in a daemon thread.
     worker_thread = threading.Thread(target=worker, daemon=True)
     worker_thread.start()
@@ -39,10 +43,6 @@ app = FastAPI(lifespan=lifespan)
 
 # --- Configuration ---
 ESPECIALISTA_URL = "https://carley1234-vidspri.hf.space/remove-background/"
-
-# --- App Initialization ---
-database.initialize_database()
-logger.info("Database initialized.")
 
 # --- Security ---
 ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY", "_a_default_secret_key_that_should_be_changed_")
