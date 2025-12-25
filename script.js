@@ -743,9 +743,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     progressText.textContent = `En cola en la posición #${data.queue_position}...`;
                     updateProgressBar(5); // Small progress for being queued
                 } else if (data.status === 'processing') {
+                    // This state is already handled correctly, but we'll keep the logic clear.
+                    // The text now reflects the active processing state, not just being "position 1".
                     const progress = data.total_frames > 0 ? (data.completed_frames / data.total_frames) * 100 : 0;
                     progressText.textContent = `Procesando... (${data.completed_frames}/${data.total_frames} fotogramas completados)`;
                     updateProgressBar(progress);
+                } else if (data.status === 'failed') {
+                    clearInterval(intervalId);
+                    showError("El trabajo de procesamiento ha fallado. Por favor, inténtalo de nuevo.");
+                    progressContainer.classList.add('hidden');
+                    serverMessage.classList.add('hidden');
                 } else if (data.status === 'completed') {
                     clearInterval(intervalId);
                     progressText.textContent = "Trabajo completado. Creando la hoja de sprites...";

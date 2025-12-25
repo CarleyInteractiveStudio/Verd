@@ -102,6 +102,15 @@ def use_code(code):
     conn.close()
 
 # --- Job and Frame Management ---
+
+def set_job_status(job_id, status):
+    """Explicitly sets the status of a job."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE processing_jobs SET status = ? WHERE job_id = ?", (status, job_id))
+    conn.commit()
+    conn.close()
+
 # ... (rest of the file is unchanged)
 def add_job_and_frames(job_id, frames_data):
     conn = get_db_connection()
@@ -150,7 +159,9 @@ def get_next_frame_to_process():
         SELECT jf.*
         FROM job_frames jf
         JOIN processing_jobs pj ON jf.job_id = pj.job_id
-        WHERE jf.status = 'queued' AND pj.queue_position > 0
+        WHERE jf.status = 'queued'
+          AND pj.status IN ('queued', 'processing')
+          AND pj.queue_position > 0
         ORDER BY pj.queue_position ASC, jf.frame_order ASC
         LIMIT 1
     """)

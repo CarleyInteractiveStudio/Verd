@@ -112,11 +112,16 @@ async def process_queue():
             job_id = frame_to_process['job_id']
             frame_order = frame_to_process['frame_order']
             try:
-                database.update_frame_status(job_id, frame_order, "processing")
+                # When the first frame is picked, update the whole job's status
+                job_info = database.get_job_status(job_id)
+                if job_info and job_info['status'] == 'queued':
+                    database.set_job_status(job_id, "processing")
+
                 output_bytes = remove(frame_to_process['image_data'], session=session)
                 database.update_frame_as_completed(job_id, frame_order, output_bytes)
             except Exception as e:
-                database.update_frame_status(job_id, frame_order, "failed")
+                print(f"Error processing frame {frame_order} for job {job_id}: {e}")
+                database.set_job_status(job_id, "failed") # Mark the whole job as failed
         else:
             await asyncio.sleep(5)
 
