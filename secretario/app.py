@@ -4,6 +4,8 @@ import asyncio
 import os
 import base64
 import httpx
+import threading
+import time
 from typing import List
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, status, Form
 from fastapi.responses import JSONResponse
@@ -12,14 +14,13 @@ from fastapi.security import APIKeyHeader
 import database
 import logging
 
-# Configure logging to provide clear output in the deployment environment.
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
 # --- Configuration ---
-# Set the URL for the specialist service, ensuring it's correct.
 ESPECIALISTA_URL = "https://carley1234-vidspri.hf.space/remove-background/"
 
 # --- App Initialization ---
@@ -104,49 +105,53 @@ async def process_frame_remotely(image_data: bytes) -> bytes:
         response.raise_for_status()
         return response.content
 
-async def worker():
-    """The main worker loop that polls for jobs and processes them."""
+async def worker_async():
+    """The async version of the worker loop."""
     logger.info("Worker loop started. Polling for jobs...")
     while True:
         frame_to_process = None
         try:
-            # Offload synchronous DB call to a thread to not block the event loop.
-            frame_to_process = await asyncio.to_thread(database.get_next_frame_to_process)
+            frame_to_process = database.get_next_frame_to_process()
 
             if frame_to_process:
                 job_id = frame_to_process['job_id']
                 frame_order = frame_to_process['frame_order']
 
-                job_info = await asyncio.to_thread(database.get_job_status, job_id)
+                job_info = database.get_job_status(job_id)
                 if job_info and job_info['status'] == 'queued':
                     logger.info(f"Job {job_id} picked up for processing.")
-                    await asyncio.to_thread(database.set_job_status, job_id, "processing")
+                    database.set_job_status(job_id, "processing")
 
                 logger.info(f"Sending frame {frame_order} of job {job_id} to specialist.")
                 output_bytes = await process_frame_remotely(frame_to_process['image_data'])
-                await asyncio.to_thread(database.update_frame_as_completed, job_id, frame_order, output_bytes)
+                database.update_frame_as_completed(job_id, frame_order, output_bytes)
                 logger.info(f"Successfully processed frame {frame_order} of job {job_id}.")
-
             else:
-                await asyncio.sleep(2) # Wait before polling again if no job is found.
+                await asyncio.sleep(2)
 
         except Exception as e:
             logger.error(f"An error occurred in the worker: {e}")
             if frame_to_process:
                 job_id = frame_to_process['job_id']
                 logger.error(f"Marking job {job_id} as failed.")
-                await asyncio.to_thread(database.set_job_status, job_id, "failed")
-            await asyncio.sleep(10) # Wait longer after an error.
+                database.set_job_status(job_id, "failed")
+            await asyncio.sleep(10)
+
+def run_async_worker():
+    """Function to run the async worker in a new event loop."""
+    asyncio.run(worker_async())
 
 @app.on_event("startup")
 async def startup_event():
     """
-    On application startup, create a background task for the worker.
-    This is a reliable way to start background processes in many deployment environments.
+    On application startup, launch the worker in a separate, daemon thread.
+    This is a robust way to ensure the background task runs continuously
+    without being managed by the main FastAPI event loop, which seems to cause issues in the deployment environment.
     """
-    logger.info("Application startup event triggered.")
-    asyncio.create_task(worker())
-    logger.info("Worker task has been created.")
+    logger.info("Application startup: Launching background worker thread.")
+    worker_thread = threading.Thread(target=run_async_worker, daemon=True)
+    worker_thread.start()
+    logger.info("Background worker thread has been started.")
 
 @app.get("/")
 def read_root():
