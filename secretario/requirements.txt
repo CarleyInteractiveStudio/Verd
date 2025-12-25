@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+python-multipart
+gunicorn
+httpx
+# Pillow is no longer needed as the secretary does not process images.
+# requests was replaced by httpx for async operations.

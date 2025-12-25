@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-rembg
-Pillow
 python-multipart
-onnxruntime
+rembg[gpu]
+Pillow
+gunicorn

@@ -1,23 +1,29 @@
 
-import io
 import uuid
-import time
 import asyncio
 import os
 import base64
+import httpx
 from typing import List
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, status, Form, Request
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, status, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
-from rembg import remove, new_session
 import database
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# --- App Initialization & Model Session ---
+# --- Configuration ---
+ESPECIALISTA_URL = os.environ.get("ESPECIALISTA_URL", "URL_DEL_ESPECIALISTA_AQUI/remove-background/")
+# Asegúrate de reemplazar "URL_DEL_ESPECIALISTA_AQUI" con la URL real de tu Hugging Face Space.
+
+# --- App Initialization ---
 database.initialize_database()
-session = new_session("isnet-anime")
 
 # --- Security ---
 ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY", "_a_default_secret_key_that_should_be_changed_")
@@ -28,7 +34,7 @@ def get_api_key(api_key: str = Depends(api_key_header)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
 
 # --- CORS Configuration ---
-origins = ["https://carleyinteractivestudio.github.io", "http://localhost:8002"] # Added localhost for local admin app
+origins = ["https://carleyinteractivestudio.github.io", "http://localhost:8002", "null"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -41,49 +47,32 @@ app.add_middleware(
 
 @app.post("/remove-background/")
 async def queue_job(images: List[UploadFile] = File(...)):
-    try:
-        if not images:
-            # This check is slightly redundant as FastAPI would likely handle it, but it's good for clarity.
-            raise HTTPException(status_code=400, detail="No images were provided.")
-
-        job_id = str(uuid.uuid4())
-        frames_data = [await image.read() for image in images]
-        position = database.add_job_and_frames(job_id, frames_data)
-        return {"job_id": job_id, "queue_position": position, "status": "queued", "total_frames": len(frames_data), "completed_frames": 0}
-    except Exception as e:
-        print(f"An error occurred during job queuing: {e}")
-        raise HTTPException(status_code=500, detail=f"Error queuing job: {str(e)}")
+    if not images:
+        raise HTTPException(status_code=400, detail="No images were provided.")
+    job_id = str(uuid.uuid4())
+    frames_data = [await image.read() for image in images]
+    position = database.add_job_and_frames(job_id, frames_data)
+    return {"job_id": job_id, "queue_position": position, "status": "queued", "total_frames": len(frames_data), "completed_frames": 0}
 
 @app.get("/status/{job_id}")
 def get_status(job_id: str):
     job_info = database.get_job_status(job_id)
     if not job_info:
         raise HTTPException(status_code=404, detail="Job not found")
-
     if job_info['status'] == 'completed':
-        # Encode frames in base64 to send them in a single JSON response
         encoded_frames = [base64.b64encode(frame_data).decode('utf-8') for frame_data in job_info['frames']]
         return JSONResponse(content={"status": "completed", "frames": encoded_frames})
-
     return job_info
 
 @app.post("/apply-code")
 async def apply_code(job_id: str = Form(...), code: str = Form(...)):
-    job = database.get_job_status(job_id)
-    if not job:
+    if not database.get_job_status(job_id):
         raise HTTPException(status_code=404, detail="Job not found")
-
     if not database.validate_code(code):
         raise HTTPException(status_code=400, detail="Invalid or expired code")
-
     database.use_code(code)
     new_position = database.apply_priority_code_and_reorder(job_id)
-
-    return {
-        "message": f"Success! Your request has been moved to position #{new_position}.",
-        "job_id": job_id,
-        "new_queue_position": new_position
-    }
+    return {"message": f"Success! Your request has been moved to position #{new_position}.", "job_id": job_id, "new_queue_position": new_position}
 
 # --- Admin API Endpoints ---
 
@@ -105,30 +94,44 @@ def delete_code_admin(code: str):
     return {"message": f"Code {code} deleted successfully."}
 
 # --- Background Worker ---
-async def process_queue():
+async def process_frame_remotely(image_data: bytes) -> bytes:
+    """Sends a single frame to the 'especialista' service and gets the result."""
+    async with httpx.AsyncClient(timeout=120.0) as client:
+        files = {'file': ('image.png', image_data, 'image/png')}
+        response = await client.post(ESPECIALISTA_URL, files=files)
+        response.raise_for_status()  # Will raise an exception for 4XX/5XX responses
+        return response.content
+
+async def worker():
+    """The main worker loop that processes jobs from the queue."""
+    logger.info("Worker started.")
     while True:
-        frame_to_process = database.get_next_frame_to_process()
+        frame_to_process = await asyncio.to_thread(database.get_next_frame_to_process)
         if frame_to_process:
             job_id = frame_to_process['job_id']
             frame_order = frame_to_process['frame_order']
             try:
-                # When the first frame is picked, update the whole job's status
-                job_info = database.get_job_status(job_id)
+                job_info = await asyncio.to_thread(database.get_job_status, job_id)
                 if job_info and job_info['status'] == 'queued':
-                    database.set_job_status(job_id, "processing")
+                    logger.info(f"Starting processing for job {job_id}")
+                    await asyncio.to_thread(database.set_job_status, job_id, "processing")
 
-                output_bytes = remove(frame_to_process['image_data'], session=session)
-                database.update_frame_as_completed(job_id, frame_order, output_bytes)
+                logger.info(f"Processing frame {frame_order} for job {job_id}")
+                output_bytes = await process_frame_remotely(frame_to_process['image_data'])
+                await asyncio.to_thread(database.update_frame_as_completed, job_id, frame_order, output_bytes)
+                logger.info(f"Completed frame {frame_order} for job {job_id}")
+
             except Exception as e:
-                print(f"Error processing frame {frame_order} for job {job_id}: {e}")
-                database.set_job_status(job_id, "failed") # Mark the whole job as failed
+                logger.error(f"Error processing frame {frame_order} for job {job_id}: {e}")
+                await asyncio.to_thread(database.set_job_status, job_id, "failed")
         else:
-            await asyncio.sleep(5)
+            await asyncio.sleep(2)
 
 @app.on_event("startup")
 async def startup_event():
-    asyncio.create_task(process_queue())
+    logger.info("Application startup...")
+    asyncio.create_task(worker())
 
 @app.get("/")
 def read_root():
-    return {"status": "VidSpri Backend is running"}
+    return {"status": "Secretario Service is running"}
