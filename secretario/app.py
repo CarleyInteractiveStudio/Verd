@@ -4,8 +4,7 @@ import asyncio
 import os
 import base64
 import httpx
-import threading
-import time
+from contextlib import asynccontextmanager
 from typing import List
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, status, Form
 from fastapi.responses import JSONResponse
@@ -18,7 +17,31 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+# --- Background Task Management ---
+worker_task = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan manager to handle the background worker task.
+    This is the modern and correct way to manage background tasks in FastAPI.
+    """
+    global worker_task
+    logger.info("Application startup: starting background worker.")
+    # Start the worker in a background task
+    worker_task = asyncio.create_task(worker())
+    yield
+    # Cleanup on shutdown
+    logger.info("Application shutdown: stopping background worker.")
+    if worker_task:
+        worker_task.cancel()
+        try:
+            await worker_task
+        except asyncio.CancelledError:
+            logger.info("Worker task cancelled successfully.")
+
+# Initialize the FastAPI app with the lifespan manager
+app = FastAPI(lifespan=lifespan)
 
 # --- Configuration ---
 ESPECIALISTA_URL = "https://carley1234-vidspri.hf.space/remove-background/"
@@ -53,13 +76,15 @@ async def queue_job(images: List[UploadFile] = File(...)):
         raise HTTPException(status_code=400, detail="No images were provided.")
     job_id = str(uuid.uuid4())
     frames_data = [await image.read() for image in images]
-    position = database.add_job_and_frames(job_id, frames_data)
+    # Run synchronous DB code in a thread to not block the event loop
+    position = await asyncio.to_thread(database.add_job_and_frames, job_id, frames_data)
     logger.info(f"Job {job_id} queued in position {position}.")
     return {"job_id": job_id, "queue_position": position, "status": "queued", "total_frames": len(frames_data), "completed_frames": 0}
 
 @app.get("/status/{job_id}")
-def get_status(job_id: str):
-    job_info = database.get_job_status(job_id)
+async def get_status(job_id: str):
+    # Run synchronous DB code in a thread
+    job_info = await asyncio.to_thread(database.get_job_status, job_id)
     if not job_info:
         raise HTTPException(status_code=404, detail="Job not found")
     if job_info['status'] == 'completed':
@@ -69,31 +94,32 @@ def get_status(job_id: str):
 
 @app.post("/apply-code")
 async def apply_code(job_id: str = Form(...), code: str = Form(...)):
-    if not database.get_job_status(job_id):
+    # Run synchronous DB code in a thread
+    if not await asyncio.to_thread(database.get_job_status, job_id):
         raise HTTPException(status_code=404, detail="Job not found")
-    if not database.validate_code(code):
+    if not await asyncio.to_thread(database.validate_code, code):
         raise HTTPException(status_code=400, detail="Invalid or expired code")
-    database.use_code(code)
-    new_position = database.apply_priority_code_and_reorder(job_id)
+    await asyncio.to_thread(database.use_code, code)
+    new_position = await asyncio.to_thread(database.apply_priority_code_and_reorder, job_id)
     return {"message": f"Success! Your request has been moved to position #{new_position}.", "job_id": job_id, "new_queue_position": new_position}
 
 # --- Admin API Endpoints ---
 
 @app.get("/admin/codes", dependencies=[Depends(get_api_key)])
-def get_all_codes_admin():
-    return database.get_all_codes()
+async def get_all_codes_admin():
+    return await asyncio.to_thread(database.get_all_codes)
 
 @app.post("/admin/codes", dependencies=[Depends(get_api_key)])
-def create_code_admin(uses: int = Form(...)):
+async def create_code_admin(uses: int = Form(...)):
     if uses <= 0:
         raise HTTPException(status_code=400, detail="Uses must be a positive integer.")
-    new_code = database.generate_code()
-    database.add_code(new_code, uses)
+    new_code = await asyncio.to_thread(database.generate_code)
+    await asyncio.to_thread(database.add_code, new_code, uses)
     return {"code": new_code, "uses": uses, "total_uses": uses}
 
 @app.delete("/admin/codes/{code}", dependencies=[Depends(get_api_key)])
-def delete_code_admin(code: str):
-    database.delete_code(code)
+async def delete_code_admin(code: str):
+    await asyncio.to_thread(database.delete_code, code)
     return {"message": f"Code {code} deleted successfully."}
 
 # --- Background Worker ---
@@ -105,53 +131,41 @@ async def process_frame_remotely(image_data: bytes) -> bytes:
         response.raise_for_status()
         return response.content
 
-async def worker_async():
-    """The async version of the worker loop."""
-    logger.info("Worker loop started. Polling for jobs...")
+async def worker():
+    """The main worker loop that polls for jobs and processes them."""
+    logger.info("Worker has started and is polling for jobs.")
     while True:
         frame_to_process = None
         try:
-            frame_to_process = database.get_next_frame_to_process()
+            # Offload synchronous DB call to a thread
+            frame_to_process = await asyncio.to_thread(database.get_next_frame_to_process)
 
             if frame_to_process:
                 job_id = frame_to_process['job_id']
                 frame_order = frame_to_process['frame_order']
 
-                job_info = database.get_job_status(job_id)
+                job_info = await asyncio.to_thread(database.get_job_status, job_id)
                 if job_info and job_info['status'] == 'queued':
                     logger.info(f"Job {job_id} picked up for processing.")
-                    database.set_job_status(job_id, "processing")
+                    await asyncio.to_thread(database.set_job_status, job_id, "processing")
 
                 logger.info(f"Sending frame {frame_order} of job {job_id} to specialist.")
                 output_bytes = await process_frame_remotely(frame_to_process['image_data'])
-                database.update_frame_as_completed(job_id, frame_order, output_bytes)
+                await asyncio.to_thread(database.update_frame_as_completed, job_id, frame_order, output_bytes)
                 logger.info(f"Successfully processed frame {frame_order} of job {job_id}.")
             else:
                 await asyncio.sleep(2)
 
+        except asyncio.CancelledError:
+            logger.info("Worker task cancelled. Exiting loop.")
+            break
         except Exception as e:
             logger.error(f"An error occurred in the worker: {e}")
             if frame_to_process:
                 job_id = frame_to_process['job_id']
                 logger.error(f"Marking job {job_id} as failed.")
-                database.set_job_status(job_id, "failed")
+                await asyncio.to_thread(database.set_job_status, job_id, "failed")
             await asyncio.sleep(10)
-
-def run_async_worker():
-    """Function to run the async worker in a new event loop."""
-    asyncio.run(worker_async())
-
-@app.on_event("startup")
-async def startup_event():
-    """
-    On application startup, launch the worker in a separate, daemon thread.
-    This is a robust way to ensure the background task runs continuously
-    without being managed by the main FastAPI event loop, which seems to cause issues in the deployment environment.
-    """
-    logger.info("Application startup: Launching background worker thread.")
-    worker_thread = threading.Thread(target=run_async_worker, daemon=True)
-    worker_thread.start()
-    logger.info("Background worker thread has been started.")
 
 @app.get("/")
 def read_root():
