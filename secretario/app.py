@@ -5,7 +5,6 @@ import os
 import base64
 import httpx
 from typing import List
-from contextlib import asynccontextmanager
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, status, Form
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,44 +12,19 @@ from fastapi.security import APIKeyHeader
 import database
 import logging
 
-# Configure logging
+# Configure logging to provide clear output in the deployment environment.
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# --- Background Task Management ---
-background_tasks = set()
-
-# --- Lifespan Management for Background Worker ---
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup: Start the background worker
-    logger.info("Application startup: starting worker.")
-    # Create a task that will run in the background
-    worker_task = asyncio.create_task(worker())
-    # Add the task to the set to keep a reference to it
-    background_tasks.add(worker_task)
-
-    yield
-
-    # Shutdown: Clean up the background tasks
-    logger.info("Application shutdown: stopping worker.")
-    for task in background_tasks:
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            logger.info("Worker task cancelled successfully.")
-
-# Initialize FastAPI app with the lifespan manager
-app = FastAPI(lifespan=lifespan)
-
+app = FastAPI()
 
 # --- Configuration ---
-# The URL of the specialist service is now correctly set to your HF Space.
+# Set the URL for the specialist service, ensuring it's correct.
 ESPECIALISTA_URL = "https://carley1234-vidspri.hf.space/remove-background/"
 
 # --- App Initialization ---
 database.initialize_database()
+logger.info("Database initialized.")
 
 # --- Security ---
 ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY", "_a_default_secret_key_that_should_be_changed_")
@@ -79,6 +53,7 @@ async def queue_job(images: List[UploadFile] = File(...)):
     job_id = str(uuid.uuid4())
     frames_data = [await image.read() for image in images]
     position = database.add_job_and_frames(job_id, frames_data)
+    logger.info(f"Job {job_id} queued in position {position}.")
     return {"job_id": job_id, "queue_position": position, "status": "queued", "total_frames": len(frames_data), "completed_frames": 0}
 
 @app.get("/status/{job_id}")
@@ -122,7 +97,7 @@ def delete_code_admin(code: str):
 
 # --- Background Worker ---
 async def process_frame_remotely(image_data: bytes) -> bytes:
-    """Sends a single frame to the 'especialista' service and gets the result."""
+    """Sends a single frame to the specialist service."""
     async with httpx.AsyncClient(timeout=120.0) as client:
         files = {'file': ('image.png', image_data, 'image/png')}
         response = await client.post(ESPECIALISTA_URL, files=files)
@@ -130,11 +105,12 @@ async def process_frame_remotely(image_data: bytes) -> bytes:
         return response.content
 
 async def worker():
-    """The main worker loop that processes jobs from the queue."""
-    logger.info("Worker started and is polling for jobs...")
+    """The main worker loop that polls for jobs and processes them."""
+    logger.info("Worker loop started. Polling for jobs...")
     while True:
+        frame_to_process = None
         try:
-            # The database calls are synchronous, so we run them in a separate thread.
+            # Offload synchronous DB call to a thread to not block the event loop.
             frame_to_process = await asyncio.to_thread(database.get_next_frame_to_process)
 
             if frame_to_process:
@@ -143,23 +119,34 @@ async def worker():
 
                 job_info = await asyncio.to_thread(database.get_job_status, job_id)
                 if job_info and job_info['status'] == 'queued':
-                    logger.info(f"Starting processing for job {job_id}")
+                    logger.info(f"Job {job_id} picked up for processing.")
                     await asyncio.to_thread(database.set_job_status, job_id, "processing")
 
-                logger.info(f"Processing frame {frame_order} for job {job_id}")
+                logger.info(f"Sending frame {frame_order} of job {job_id} to specialist.")
                 output_bytes = await process_frame_remotely(frame_to_process['image_data'])
                 await asyncio.to_thread(database.update_frame_as_completed, job_id, frame_order, output_bytes)
-                logger.info(f"Completed frame {frame_order} for job {job_id}")
+                logger.info(f"Successfully processed frame {frame_order} of job {job_id}.")
 
             else:
-                # If no job is found, wait for a short period before polling again.
-                await asyncio.sleep(2)
-        except Exception as e:
-            logger.error(f"An error occurred in the worker loop: {e}")
-            # In case of an unexpected error (e.g., DB connection issue),
-            # wait a bit longer before retrying to avoid spamming logs.
-            await asyncio.sleep(10)
+                await asyncio.sleep(2) # Wait before polling again if no job is found.
 
+        except Exception as e:
+            logger.error(f"An error occurred in the worker: {e}")
+            if frame_to_process:
+                job_id = frame_to_process['job_id']
+                logger.error(f"Marking job {job_id} as failed.")
+                await asyncio.to_thread(database.set_job_status, job_id, "failed")
+            await asyncio.sleep(10) # Wait longer after an error.
+
+@app.on_event("startup")
+async def startup_event():
+    """
+    On application startup, create a background task for the worker.
+    This is a reliable way to start background processes in many deployment environments.
+    """
+    logger.info("Application startup event triggered.")
+    asyncio.create_task(worker())
+    logger.info("Worker task has been created.")
 
 @app.get("/")
 def read_root():
