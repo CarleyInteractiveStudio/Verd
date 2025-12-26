@@ -802,6 +802,353 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 'image/png');
         });
     }
+
+    // --- Sprite Previewer Logic ---
+    const spritePreviewBtn = document.getElementById('sprite-preview-btn');
+    const spritePreviewSection = document.getElementById('sprite-preview-section');
+    const spriteFileInput = document.getElementById('sprite-file');
+    const dragDropAreaSprite = document.getElementById('drag-drop-area-sprite');
+    const spriteFramesInput = document.getElementById('sprite-frames');
+    const detectFramesBtn = document.getElementById('detect-frames-btn');
+    const spriteSpeedInput = document.getElementById('sprite-speed');
+    const speedValue = document.getElementById('speed-value');
+    const spriteCanvas = document.getElementById('sprite-canvas');
+    const playPauseBtn = document.getElementById('play-pause-animation-btn');
+    const spriteCanvasContainer = document.getElementById('sprite-canvas-container');
+
+    let spriteImageSrc = null;
+    let animationState = {
+        isPlaying: false,
+        frame: 0,
+        fps: 12,
+        then: 0,
+        animationFrameId: null,
+        image: null
+    };
+
+    spritePreviewBtn.addEventListener('click', () => {
+        mainMenu.classList.add('hidden');
+        spritePreviewSection.classList.remove('hidden');
+    });
+
+    dragDropAreaSprite.addEventListener('click', () => spriteFileInput.click());
+
+     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dragDropAreaSprite.addEventListener(eventName, e => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dragDropAreaSprite.addEventListener(eventName, () => dragDropAreaSprite.classList.add('drag-over'), false);
+    });
+    ['dragleave', 'drop'].forEach(eventName => {
+        dragDropAreaSprite.addEventListener(eventName, () => dragDropAreaSprite.classList.remove('drag-over'), false);
+    });
+
+    dragDropAreaSprite.addEventListener('drop', e => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            spriteFileInput.files = files;
+            handleSpriteFile(files[0]);
+        }
+    });
+
+    spriteFileInput.addEventListener('change', e => {
+        if (e.target.files && e.target.files[0]) {
+            handleSpriteFile(e.target.files[0]);
+        }
+    });
+
+    function handleSpriteFile(file) {
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                spriteImageSrc = e.target.result;
+                dragDropAreaSprite.querySelector('p').textContent = file.name;
+                stopAnimation();
+                animationState.image = new Image();
+                animationState.image.onload = () => {
+                    // Set canvas to first frame preview
+                    drawFrame(0);
+                };
+                animationState.image.src = spriteImageSrc;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    spriteSpeedInput.addEventListener('input', e => {
+        const newFps = parseInt(e.target.value, 10);
+        animationState.fps = newFps;
+        speedValue.textContent = newFps;
+    });
+
+    playPauseBtn.addEventListener('click', () => {
+        if (animationState.isPlaying) {
+            stopAnimation();
+        } else {
+            startAnimation();
+        }
+    });
+
+    function startAnimation() {
+        if (!spriteImageSrc) {
+            showError("Por favor, sube una imagen primero.");
+            return;
+        }
+        playPauseBtn.textContent = "Pausar";
+        animationState.isPlaying = true;
+        animationState.then = performance.now();
+        animationState.animationFrameId = requestAnimationFrame(animate);
+    }
+
+    function stopAnimation() {
+        playPauseBtn.textContent = "Reproducir";
+        animationState.isPlaying = false;
+        if (animationState.animationFrameId) {
+            cancelAnimationFrame(animationState.animationFrameId);
+        }
+    }
+
+    function animate(now) {
+        if (!animationState.isPlaying) return;
+
+        animationState.animationFrameId = requestAnimationFrame(animate);
+
+        const elapsed = now - animationState.then;
+        const fpsInterval = 1000 / animationState.fps;
+
+        if (elapsed > fpsInterval) {
+            animationState.then = now - (elapsed % fpsInterval);
+
+            const frameCount = parseInt(spriteFramesInput.value, 10);
+            if (frameCount <= 0) return;
+
+            drawFrame(animationState.frame);
+
+            animationState.frame = (animationState.frame + 1) % frameCount;
+        }
+    }
+
+    function drawFrame(frameIndex) {
+        const img = animationState.image;
+        if (!img) return;
+
+        const frameCount = parseInt(spriteFramesInput.value, 10) || 1;
+        const frameWidth = img.width / frameCount;
+        const frameHeight = img.height;
+
+        // Resize canvas to match frame aspect ratio
+        spriteCanvas.width = frameWidth;
+        spriteCanvas.height = frameHeight;
+
+        const ctx = spriteCanvas.getContext('2d');
+        ctx.clearRect(0, 0, spriteCanvas.width, spriteCanvas.height);
+
+        const sourceX = frameIndex * frameWidth;
+
+        ctx.drawImage(
+            img,
+            sourceX, 0, frameWidth, frameHeight, // Source rectangle
+            0, 0, frameWidth, frameHeight      // Destination rectangle
+        );
+    }
+
+    // --- Automatic Frame Detection ---
+    detectFramesBtn.addEventListener('click', async () => {
+        if (!spriteImageSrc) {
+            showError("Sube una imagen antes de detectar los fotogramas.");
+            return;
+        }
+
+        detectFramesBtn.textContent = "Procesando...";
+        detectFramesBtn.disabled = true;
+
+        try {
+            const frameCount = await countFramesByConnectivity(spriteImageSrc);
+            spriteFramesInput.value = frameCount;
+        } catch (error) {
+            showError("No se pudo detectar los fotogramas. " + error.message);
+        } finally {
+            detectFramesBtn.textContent = "Detección Automática";
+            detectFramesBtn.disabled = false;
+        }
+    });
+
+    async function countFramesByConnectivity(imageUrl) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+
+                try {
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const { data, width, height } = imageData;
+                    const visited = new Uint8Array(width * height);
+                    let count = 0;
+
+                    for (let y = 0; y < height; y++) {
+                        for (let x = 0; x < width; x++) {
+                            const index = (y * width + x);
+                            if (visited[index]) continue;
+
+                            // Check alpha channel (every 4th value)
+                            const alphaIndex = index * 4 + 3;
+                            if (data[alphaIndex] > 0) { // If pixel is not transparent
+                                count++;
+                                // Flood fill to mark all connected pixels as visited
+                                const stack = [[x, y]];
+                                while (stack.length > 0) {
+                                    const [px, py] = stack.pop();
+                                    const pIndex = (py * width + px);
+
+                                    if (px >= 0 && px < width && py >= 0 && py < height && !visited[pIndex] && data[pIndex * 4 + 3] > 0) {
+                                        visited[pIndex] = 1;
+                                        stack.push([px + 1, py]);
+                                        stack.push([px - 1, py]);
+                                        stack.push([px, py + 1]);
+                                        stack.push([px, py - 1]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    resolve(count > 0 ? count : 1);
+                } catch (e) {
+                    reject(new Error("No se pudo analizar la imagen. Si es de otra web, descárgala y súbela desde tu dispositivo."));
+                }
+            };
+            img.onerror = () => {
+                reject(new Error("No se pudo cargar la imagen."));
+            };
+            img.src = imageUrl;
+        });
+    }
+
+
+    // --- Result Preview Modal Logic ---
+    const previewSpriteBtn = document.getElementById('preview-sprite-btn');
+    const spritePreviewModal = document.getElementById('sprite-preview-modal');
+    const closeSpritePreviewBtn = document.querySelector('.close-sprite-preview-btn');
+    const modalSpriteCanvas = document.getElementById('modal-sprite-canvas');
+    const modalSpriteSpeed = document.getElementById('modal-sprite-speed');
+    const modalSpeedValue = document.getElementById('modal-speed-value');
+
+    let generatedSprite = {
+        url: null,
+        frameCount: 0
+    };
+
+    let modalAnimationState = {
+        isPlaying: false,
+        frame: 0,
+        fps: 12,
+        then: 0,
+        animationFrameId: null,
+        image: null
+    };
+
+    // Add new modal to the list of closable modals
+    function updatedCloseModalOnClickOutside(event) {
+        if (event.target === spritePreviewModal) {
+            stopModalAnimation();
+            spritePreviewModal.classList.add('hidden');
+        }
+        closeModalOnClickOutside(event); // Call original function
+    }
+    window.removeEventListener('click', closeModalOnClickOutside);
+    window.addEventListener('click', updatedCloseModalOnClickOutside);
+
+    closeSpritePreviewBtn.addEventListener('click', () => {
+        stopModalAnimation();
+        spritePreviewModal.classList.add('hidden');
+    });
+
+    previewSpriteBtn.addEventListener('click', () => {
+        if (generatedSprite.url && generatedSprite.frameCount > 0) {
+            modalAnimationState.image = new Image();
+            modalAnimationState.image.onload = () => {
+                spritePreviewModal.classList.remove('hidden');
+                startModalAnimation();
+            };
+            modalAnimationState.image.src = generatedSprite.url;
+        } else {
+            showError("No hay un sprite generado para previsualizar.");
+        }
+    });
+
+    modalSpriteSpeed.addEventListener('input', e => {
+        const newFps = parseInt(e.target.value, 10);
+        modalAnimationState.fps = newFps;
+        modalSpeedValue.textContent = newFps;
+    });
+
+    function startModalAnimation() {
+        modalAnimationState.isPlaying = true;
+        modalAnimationState.then = performance.now();
+        modalAnimationState.animationFrameId = requestAnimationFrame(animateModal);
+    }
+
+    function stopModalAnimation() {
+        modalAnimationState.isPlaying = false;
+        if (modalAnimationState.animationFrameId) {
+            cancelAnimationFrame(modalAnimationState.animationFrameId);
+        }
+    }
+
+    function animateModal(now) {
+        if (!modalAnimationState.isPlaying) return;
+
+        modalAnimationState.animationFrameId = requestAnimationFrame(animateModal);
+
+        const elapsed = now - modalAnimationState.then;
+        const fpsInterval = 1000 / modalAnimationState.fps;
+
+        if (elapsed > fpsInterval) {
+            modalAnimationState.then = now - (elapsed % fpsInterval);
+
+            drawModalFrame(modalAnimationState.frame);
+
+            modalAnimationState.frame = (modalAnimationState.frame + 1) % generatedSprite.frameCount;
+        }
+    }
+
+    function drawModalFrame(frameIndex) {
+        const img = modalAnimationState.image;
+        if (!img) return;
+
+        const frameWidth = img.width / generatedSprite.frameCount;
+        const frameHeight = img.height;
+
+        modalSpriteCanvas.width = frameWidth;
+        modalSpriteCanvas.height = frameHeight;
+
+        const ctx = modalSpriteCanvas.getContext('2d');
+        ctx.clearRect(0, 0, modalSpriteCanvas.width, modalSpriteCanvas.height);
+
+        const sourceX = frameIndex * frameWidth;
+
+        ctx.drawImage(
+            img,
+            sourceX, 0, frameWidth, frameHeight,
+            0, 0, frameWidth, frameHeight
+        );
+    }
+
+    // Override original createSpriteSheet to store generated sprite info
+    const originalCreateSpriteSheet = createSpriteSheet;
+    createSpriteSheet = async function(blobs) {
+        await originalCreateSpriteSheet(blobs); // Call original function
+        generatedSprite.url = spriteImage.src;
+        generatedSprite.frameCount = blobs.length;
+    };
 });
 
 // --- Google Translate Initialization ---

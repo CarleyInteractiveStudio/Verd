@@ -665,13 +665,13 @@ footer {
     background-color: #f0c400;
 }
 
-/* --- Sound Generation Section Styles --- */
-#sound-generation-section h2 {
+/* --- AI Generation Section Styles (Sound & Text) --- */
+.ai-generation-section h2 {
     margin-bottom: 1.5rem;
     color: #ffffff;
 }
 
-#sound-generation-section textarea {
+.ai-generation-section textarea {
     width: 100%;
     padding: 0.75rem;
     border: 1px solid #333;
@@ -684,7 +684,7 @@ footer {
     resize: vertical;
 }
 
-#sound-generation-section button {
+.ai-generation-section button {
     width: 100%;
     padding: 0.75rem;
     border: none;
@@ -698,7 +698,7 @@ footer {
     margin-top: 0.5rem;
 }
 
-#sound-generation-section button:hover {
+.ai-generation-section button:hover {
     background-color: #3700b3;
 }
 
@@ -748,4 +748,151 @@ footer {
     font-size: 0.9rem;
     color: #a0a0a0;
     margin-bottom: 0.5rem;
+}
+
+/* --- Sprite Preview Section Styles --- */
+#sprite-preview-section .input-with-button {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+#sprite-preview-section .input-with-button input {
+    flex-grow: 1;
+}
+
+#sprite-preview-section .input-with-button button {
+    flex-shrink: 0;
+    padding: 0.75rem;
+    background-color: #373737;
+    border: 1px solid #444;
+}
+#sprite-preview-section .input-with-button button:hover {
+     background-color: #4f4f4f;
+}
+
+#sprite-preview-section input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 10px;
+    background: #333;
+    outline: none;
+    opacity: 0.7;
+    transition: opacity .2s;
+    border-radius: 5px;
+}
+
+#sprite-preview-section input[type="range"]:hover {
+    opacity: 1;
+}
+
+#sprite-preview-section input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    background: #03dac6;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+#sprite-preview-section input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    background: #03dac6;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+#sprite-canvas-container {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #333;
+    background-color: #2c2c2c;
+    padding: 10px;
+    border-radius: 4px;
+    min-height: 150px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Checkerboard background */
+    background-image:
+        linear-gradient(45deg, #444 25%, transparent 25%),
+        linear-gradient(-45deg, #444 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #444 75%),
+        linear-gradient(-45deg, transparent 75%, #444 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+#sprite-canvas {
+    max-width: 100%;
+    object-fit: contain;
+}
+
+#sprite-preview-section button {
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    background-color: #6200ea;
+    color: white;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-top: 0.5rem;
+}
+
+#sprite-preview-section button:hover {
+     background-color: #3700b3;
+}
+
+/* --- "Coming Soon" Ribbon and Tooltip Styles --- */
+.menu-card.coming-soon {
+    position: relative;
+    overflow: hidden; /* Keep the ribbon contained */
+}
+
+.ribbon {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 120px;
+    height: 120px;
+    overflow: hidden;
+    pointer-events: none; /* Allows clicks to go through to the card */
+}
+
+.ribbon span {
+    position: absolute;
+    display: block;
+    width: 170px;
+    padding: 8px 0;
+    background-color: #03dac6;
+    box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+    color: #121212;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-align: center;
+    transform: rotate(45deg) translateY(-20px) translateX(30px);
+}
+
+/* Tooltip */
+.coming-soon[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 105%; /* Position above the card */
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    background-color: #2c2c2c;
+    border: 1px solid #444;
+    color: #e0e0e0;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none; /* Ensure it doesn't interfere with hover on the card itself */
 }
