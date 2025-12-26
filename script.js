@@ -5,6 +5,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const videoSpriteBtn = document.getElementById('video-sprite-btn');
     const imageSpriteBtn = document.getElementById('image-sprite-btn');
 
+    // Image Animation Section elements
+    const imageAnimationSection = document.getElementById('image-animation-section');
+    const animationForm = document.getElementById('animation-form');
+    const dragDropArea = document.getElementById('drag-drop-area');
+    const imageFileInput = document.getElementById('image-file');
+    const imagePreviewContainerAnim = document.getElementById('image-preview-container-anim');
+    const imagePreviewAnim = document.getElementById('image-preview-anim');
+
     const form = document.getElementById('sprite-form');
     const videoFileInput = document.getElementById('video-file');
     const videoPreviewContainer = document.getElementById('video-preview-container');
@@ -51,8 +59,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeShareBtn = document.querySelector('.close-share-btn');
     const shareAppBtn = document.getElementById('share-app-btn');
 
+    // Download App Modal elements
+    const downloadAppModal = document.getElementById('download-app-modal');
+    const closeDownloadBtn = document.querySelector('.close-download-btn');
+    const downloadBtnHeader = document.getElementById('download-app-btn-header');
+    const downloadBtnResult = document.getElementById('download-app-btn-result');
+
+    // Premium Feature Modal elements
+    const premiumFeatureModal = document.getElementById('premium-feature-modal');
+    const closePremiumFeatureBtn = document.querySelector('.close-premium-feature-btn');
+
+    // Footer buttons
+    const donateBtnFooter = document.getElementById('donate-btn-footer');
+    const shareBtnFooter = document.getElementById('share-btn-footer');
+
     let extractedFrames = []; // To store the extracted frame blobs
-    const backendUrl = 'https://carley1234-vidspri.hf.space/remove-background/';
+
+    const dragDropAreaVideo = document.getElementById('drag-drop-area-video');
+
+    // --- URLs de Servidores ---
+    // URL del servidor para quitar el fondo de las imágenes
+    const backgroundRemovalUrl = 'https://carley1234-vidspri.hf.space/remove-background/';
+
+
+    // --- App Detection Logic ---
+    function showDownloadButtons() {
+        // This function is called if the app is running in a web browser
+        const buttons = document.querySelectorAll('.download-btn');
+        buttons.forEach(btn => btn.classList.remove('hidden-by-default'));
+    }
+
+    if (typeof window.esAppNativa === 'undefined') {
+        showDownloadButtons();
+    }
 
     // --- Main Menu Logic ---
 
@@ -62,7 +101,75 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     imageSpriteBtn.addEventListener('click', () => {
-        unavailableModal.classList.remove('hidden');
+        mainMenu.classList.add('hidden');
+        imageAnimationSection.classList.remove('hidden');
+    });
+
+    // --- Image Animation Logic ---
+
+    // Function to handle file selection (from both dialog and drop)
+    function handleImageFile(file) {
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreviewAnim.src = e.target.result;
+                imagePreviewContainerAnim.classList.remove('hidden');
+                dragDropArea.querySelector('p').style.display = 'none'; // Hide the text
+            };
+            reader.readAsDataURL(file);
+        } else {
+            showError('Por favor, selecciona un archivo de imagen válido (.png, .jpg).');
+            // Reset if invalid file
+            imagePreviewContainerAnim.classList.add('hidden');
+            dragDropArea.querySelector('p').style.display = 'block';
+        }
+    }
+
+    // Make the drag-drop area clickable to open the file dialog
+    dragDropArea.addEventListener('click', () => {
+        imageFileInput.click();
+    });
+
+    // Listen for file selection from the dialog
+    imageFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleImageFile(e.target.files[0]);
+        }
+    });
+
+    // Add drag-and-drop event listeners
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dragDropArea.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dragDropArea.addEventListener(eventName, () => {
+            dragDropArea.classList.add('drag-over');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dragDropArea.addEventListener(eventName, () => {
+            dragDropArea.classList.remove('drag-over');
+        }, false);
+    });
+
+    dragDropArea.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            // Corregimos el bug: Asignamos el archivo arrastrado al input de archivo
+            imageFileInput.files = files;
+            // Ahora llamamos a la función que muestra la vista previa
+            handleImageFile(files[0]);
+        }
+    });
+
+    document.getElementById('generate-animation-btn').addEventListener('click', () => {
+        premiumFeatureModal.classList.remove('hidden');
     });
 
     // --- Premium Code Logic ---
@@ -116,6 +223,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target === shareModal) {
             shareModal.classList.add('hidden');
         }
+        if (event.target === downloadAppModal) {
+            downloadAppModal.classList.add('hidden');
+        }
+        if (event.target === premiumFeatureModal) {
+            premiumFeatureModal.classList.add('hidden');
+        }
     }
 
     window.addEventListener('click', closeModalOnClickOutside);
@@ -126,6 +239,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     closeShareBtn.addEventListener('click', () => {
         shareModal.classList.add('hidden');
+    });
+
+    closeDownloadBtn.addEventListener('click', () => {
+        downloadAppModal.classList.add('hidden');
+    });
+
+    closePremiumFeatureBtn.addEventListener('click', () => {
+        premiumFeatureModal.classList.add('hidden');
+    });
+
+    downloadBtnHeader.addEventListener('click', () => {
+        downloadAppModal.classList.remove('hidden');
+    });
+
+    downloadBtnResult.addEventListener('click', () => {
+        downloadAppModal.classList.remove('hidden');
+    });
+
+    // --- Footer Buttons Logic ---
+    donateBtnFooter.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.open('https://www.paypal.com/donate/?hosted_button_id=SF9TB2TJLYL96', '_blank');
+    });
+
+    shareBtnFooter.addEventListener('click', (e) => {
+        e.preventDefault();
+        shareAppBtn.click(); // Simulate a click on the existing share button
     });
 
     // --- Share Logic ---
@@ -151,16 +291,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Video Processing Logic ---
 
-    videoFileInput.addEventListener('change', () => {
-        if (videoFileInput.files && videoFileInput.files[0]) {
-            const videoURL = URL.createObjectURL(videoFileInput.files[0]);
+    function handleVideoFile(file) {
+        if (file && file.type.startsWith('video/')) {
+            const videoURL = URL.createObjectURL(file);
             videoPreview.src = videoURL;
             videoPreview.load();
             videoPreviewContainer.classList.remove('hidden');
+            // Hide the drag-drop text and show the preview instead
+            dragDropAreaVideo.querySelector('p').style.display = 'none';
             framePreviewContainer.classList.add('hidden');
             resultContainer.classList.add('hidden');
         } else {
+            showError('Por favor, selecciona un archivo de video válido.');
             videoPreviewContainer.classList.add('hidden');
+            dragDropAreaVideo.querySelector('p').style.display = 'block';
+        }
+    }
+
+    videoFileInput.addEventListener('change', () => {
+        if (videoFileInput.files && videoFileInput.files[0]) {
+            handleVideoFile(videoFileInput.files[0]);
+        }
+    });
+
+    // Add drag-and-drop for video
+    dragDropAreaVideo.addEventListener('click', () => videoFileInput.click());
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dragDropAreaVideo.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dragDropAreaVideo.addEventListener(eventName, () => {
+            dragDropAreaVideo.classList.add('drag-over');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dragDropAreaVideo.addEventListener(eventName, () => {
+            dragDropAreaVideo.classList.remove('drag-over');
+        }, false);
+    });
+
+    dragDropAreaVideo.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            videoFileInput.files = files; // Assign dropped file to input
+            handleVideoFile(files[0]);
         }
     });
 
@@ -220,13 +401,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    generateSpriteBtn.addEventListener('click', async () => {
+    generateSpriteBtn.addEventListener('click', processFramesAndGenerateSpriteSheet);
+
+    // --- Refactored Sprite Generation Function ---
+    async function processFramesAndGenerateSpriteSheet() {
         if (extractedFrames.length === 0) {
             showError("No hay fotogramas para procesar.");
             return;
         }
 
         hideAllSections();
+        // Ensure progress container is visible for this stage if not already
         progressContainer.classList.remove('hidden');
         serverMessage.classList.remove('hidden');
         bannerAdContainer.classList.remove('hidden');
@@ -238,7 +423,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             for (let i = 0; i < totalFrames; i++) {
                 const frameData = extractedFrames[i];
-                progressText.textContent = `Procesando fotograma ${i + 1} de ${totalFrames}...`;
+                progressText.textContent = `Procesando fotograma ${i + 1} de ${totalFrames}... (Quitando fondo)`;
+                const progressPercentage = (i / totalFrames) * 100;
+                updateProgressBar(progressPercentage);
+
 
                 const formData = new FormData();
                 formData.append('image', frameData.blob, `frame_${frameData.id}.png`);
@@ -246,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     formData.append('premium_code', premiumCode);
                 }
 
-                const response = await fetch(backendUrl, {
+                const response = await fetch(backgroundRemovalUrl, {
                     method: 'POST',
                     body: formData,
                 });
@@ -258,14 +446,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const processedBlob = await response.blob();
                 processedFrames.push(processedBlob);
-
-                updateProgressBar(((i + 1) / totalFrames) * 100);
             }
 
+            updateProgressBar(100);
             progressText.textContent = "Creando la hoja de sprites final...";
             await createSpriteSheet(processedFrames);
             resultContainer.classList.remove('hidden');
-            shareModal.classList.remove('hidden'); // Show the share modal
+            shareModal.classList.remove('hidden');
 
         } catch (error) {
             showError(error.message);
@@ -274,7 +461,8 @@ document.addEventListener('DOMContentLoaded', () => {
             serverMessage.classList.add('hidden');
             bannerAdContainer.classList.add('hidden');
         }
-    });
+    }
+
 
     // --- Helper Functions ---
 
@@ -396,3 +584,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// --- Google Translate Initialization ---
+function googleTranslateElementInit() {
+    new google.translate.TranslateElement({
+        pageLanguage: 'es',
+        includedLanguages: 'es,en,zh-CN,hi,pt,ru,fr,ar,bn,de,ja,ko,it,id,tr',
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+        autoDisplay: false
+    }, 'google_translate_element');
+}
