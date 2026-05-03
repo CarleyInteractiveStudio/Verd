@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Verd - Panel de Anunciantes</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="dark-theme">
+    <div style="padding: 20px; max-width: 600px; margin: auto;">
+        <h1 style="color: var(--primary-green);">Panel de Anunciantes</h1>
+        <form id="ad-form" style="background: var(--card-bg); padding: 20px; border-radius: 10px; margin-top: 20px;">
+            <div style="margin-bottom: 15px;">
+                <label>Título del Anuncio</label><br>
+                <input type="text" id="title" required style="width: 100%; padding: 10px; background: #222; border: 1px solid #333; color: white;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>Video (MP4)</label><br>
+                <input type="file" id="video" accept="video/*" required style="color: white;">
+            </div>
+            <div style="margin-bottom: 15px;">
+                <label>Vistas Pedidas</label><br>
+                <input type="number" id="views" value="1000" style="width: 100%; padding: 10px; background: #222; border: 1px solid #333; color: white;">
+            </div>
+            <button type="submit" style="background: var(--primary-green); color: black; border: none; padding: 15px; width: 100%; font-weight: bold; cursor: pointer;">PUBLICAR ANUNCIO</button>
+        </form>
+    </div>
+    <script>
+        document.getElementById('ad-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('title', document.getElementById('title').value);
+            formData.append('video', document.getElementById('video').files[0]);
+            formData.append('totalViews', document.getElementById('views').value);
+            formData.append('cpm', 5);
+
+            const token = localStorage.getItem('token');
+            const res = await fetch('http://localhost:5000/api/advertiser/ads', {
+                method: 'POST',
+                headers: { 'x-auth-token': token },
+                body: formData
+            });
+
+            if (res.ok) alert('Anuncio subido con éxito');
+            else alert('Error al subir anuncio');
+        };
+    </script>
+</body>
+</html>

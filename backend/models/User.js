@@ -1,0 +1,27 @@
+const mongoose = require('mongoose');
+
+const UserSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    points: { type: Number, default: 0 },
+    deviceId: { type: String, required: true },
+    verificationStatus: {
+        type: String,
+        enum: ['unverified', 'pending', 'verified'],
+        default: 'unverified'
+    },
+    kycData: {
+        fullName: String,
+        idNumber: String,
+        documentImageUrl: String // To be deleted after approval
+    },
+    referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    referralCount: { type: Number, default: 0 },
+    videosWatchedToday: { type: Number, default: 0 },
+    totalVideosWatched: { type: Number, default: 0 },
+    lastVideoWatchedAt: { type: Date },
+    role: { type: String, enum: ['user', 'advertiser', 'admin'], default: 'user' }
+}, { timestamps: true });
+
+module.exports = mongoose.model('User', UserSchema);
