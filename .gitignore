@@ -1,0 +1,6 @@
+node_modules/
+.env
+backend/uploads/kyc/*
+backend/uploads/videos/*
+!backend/uploads/kyc/.gitkeep
+!backend/uploads/videos/.gitkeep
