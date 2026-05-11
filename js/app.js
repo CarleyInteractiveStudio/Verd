@@ -1,7 +1,8 @@
 let currentWindow = 'free';
 let userPoints = 0;
 let userData = null;
-const API_URL = 'http://localhost:5000/api';
+const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:5000' : '';
+const API_URL = `${API_BASE}/api`;
 
 // --- Auth Logic ---
 
@@ -295,8 +296,8 @@ async function adminList(type) {
                 <div><b>${escapeHTML(u.username)}</b> (${escapeHTML(u.kycData.fullName)})</div>
                 <div style="font-size:12px; color:var(--text-muted)">ID: ${escapeHTML(u.kycData.idNumber)}</div>
                 <div style="display:flex; gap:10px; margin-top:10px">
-                    <a href="http://localhost:5000/${u.kycData.documentImageUrl}" target="_blank" style="color:var(--primary-green); font-size:12px">Ver Documento</a>
-                    <a href="http://localhost:5000/${u.kycData.selfieImageUrl}" target="_blank" style="color:var(--primary-green); font-size:12px">Ver Selfie</a>
+                    <a href="${API_BASE}/${u.kycData.documentImageUrl}" target="_blank" style="color:var(--primary-green); font-size:12px">Ver Documento</a>
+                    <a href="${API_BASE}/${u.kycData.selfieImageUrl}" target="_blank" style="color:var(--primary-green); font-size:12px">Ver Selfie</a>
                 </div>
                 <div style="display:flex; gap:10px; width:100%; margin-top:15px">
                     <button class="btn btn-primary" style="padding:10px; font-size:12px" onclick="updateStatus('kyc', '${u._id}', 'verified')">APROBAR</button>
@@ -323,7 +324,7 @@ async function adminList(type) {
             <div class="config-item" style="flex-direction:column; align-items:flex-start">
                 <div><b>${escapeHTML(ad.title)}</b></div>
                 <div style="font-size:12px; color:var(--text-muted)">Por: ${escapeHTML(ad.advertiser.username)} | Vistas: ${ad.totalViewsOrdered}</div>
-                <a href="http://localhost:5000/${ad.videoUrl}" target="_blank" style="color:var(--primary-green); font-size:12px; margin-top:10px">Ver Video</a>
+                <a href="${API_BASE}/${ad.videoUrl}" target="_blank" style="color:var(--primary-green); font-size:12px; margin-top:10px">Ver Video</a>
                 <div style="display:flex; gap:10px; width:100%; margin-top:15px">
                     <button class="btn btn-primary" style="padding:10px; font-size:12px" onclick="updateStatus('ad', '${ad._id}', 'active')">APROBAR</button>
                     <button class="btn" style="padding:10px; font-size:12px; background:var(--danger); color:white" onclick="updateStatus('ad', '${ad._id}', 'rejected')">RECHAZAR</button>
@@ -701,7 +702,7 @@ async function startVideo(adId) {
     const v = document.getElementById('ad-video');
 
     // For demo, if no real video URL, use a placeholder
-    v.src = ad.videoUrl ? (ad.videoUrl.startsWith('http') ? ad.videoUrl : `http://localhost:5000/${ad.videoUrl}`) : 'https://www.w3schools.com/html/mov_bbb.mp4';
+    v.src = ad.videoUrl ? (ad.videoUrl.startsWith('http') ? ad.videoUrl : `${API_BASE}/${ad.videoUrl}`) : 'https://www.w3schools.com/html/mov_bbb.mp4';
 
     m.style.display = 'flex';
     v.play();

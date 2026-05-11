@@ -25,6 +25,7 @@
         </form>
     </div>
     <script>
+        const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:5000' : '';
         document.getElementById('ad-form').onsubmit = async (e) => {
             e.preventDefault();
             const formData = new FormData();
@@ -34,7 +35,7 @@
             formData.append('cpm', 5);
 
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:5000/api/advertiser/ads', {
+            const res = await fetch(`${API_BASE}/api/advertiser/ads`, {
                 method: 'POST',
                 headers: { 'x-auth-token': token },
                 body: formData
