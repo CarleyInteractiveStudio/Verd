@@ -14,7 +14,9 @@ const AdSchema = new mongoose.Schema({
     location: {
         type: { type: String, enum: ['Point'], default: 'Point' },
         coordinates: { type: [Number] } // [longitude, latitude]
-    }
+    },
+    ctaText: { type: String, default: 'Visitar Web' },
+    ctaUrl: String
 }, { timestamps: true });
 
 AdSchema.index({ location: '2dsphere' });

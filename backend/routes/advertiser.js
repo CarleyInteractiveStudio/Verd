@@ -22,7 +22,14 @@ router.post('/ads', auth, (req, res) => {
     upload(req, res, async (err) => {
         if (err) return res.status(400).json({ msg: err });
         try {
-            const { title, totalViews, cpm, scope, targetCountry, lat, lng } = req.body;
+            const user = await User.findById(req.user.id);
+            const { title, totalViews, cpm, scope, targetCountry, lat, lng, ctaText, ctaUrl } = req.body;
+
+            const cost = (totalViews / 1000) * cpm;
+            if (user.advertiserCredits < cost) {
+                return res.status(400).json({ msg: 'Saldo insuficiente en tu billetera publicitaria.' });
+            }
+
             const newAd = new Ad({
                 title,
                 videoUrl: req.file.path,
@@ -32,8 +39,12 @@ router.post('/ads', auth, (req, res) => {
                 scope,
                 targetCountry,
                 location: (lat && lng) ? { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] } : undefined,
+                ctaText,
+                ctaUrl,
                 status: 'pending'
             });
+            user.advertiserCredits -= cost;
+            await user.save();
             await newAd.save();
             res.json(newAd);
         } catch (err) {
@@ -68,6 +79,17 @@ router.get('/my-ads', auth, async (req, res) => {
     try {
         const ads = await Ad.find({ advertiser: req.user.id });
         res.json(ads);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+router.post('/add-credits', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        user.advertiserCredits += req.body.amount;
+        await user.save();
+        res.json({ credits: user.advertiserCredits });
     } catch (err) {
         res.status(500).send('Server Error');
     }

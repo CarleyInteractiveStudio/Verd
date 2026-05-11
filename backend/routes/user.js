@@ -26,7 +26,36 @@ const upload = multer({
 router.get('/me', auth, async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select('-password');
+
+        // Update Streak & Last Active
+        const now = new Date();
+        const lastActive = new Date(user.lastActiveAt);
+        const diffDays = Math.floor((now - lastActive) / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 1) {
+            user.dailyStreak += 1;
+            // Award bonus for streaks?
+            if (user.dailyStreak % 7 === 0) user.points += 50;
+        } else if (diffDays > 1) {
+            user.dailyStreak = 1;
+        }
+
+        user.lastActiveAt = now;
+        await user.save();
+
         res.json(user);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+router.get('/leaderboard', auth, async (req, res) => {
+    try {
+        const topUsers = await User.find({ role: 'user' })
+            .sort({ points: -1 })
+            .limit(10)
+            .select('username points dailyStreak');
+        res.json(topUsers);
     } catch (err) {
         res.status(500).send('Server Error');
     }

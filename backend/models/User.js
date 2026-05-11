@@ -31,6 +31,9 @@ const UserSchema = new mongoose.Schema({
     videosWatchedToday: { type: Number, default: 0 },
     totalVideosWatched: { type: Number, default: 0 },
     lastVideoWatchedAt: { type: Date },
+    dailyStreak: { type: Number, default: 0 },
+    lastActiveAt: { type: Date, default: Date.now },
+    advertiserCredits: { type: Number, default: 0 },
     role: { type: String, enum: ['user', 'advertiser', 'admin'], default: 'user' }
 }, { timestamps: true });
 

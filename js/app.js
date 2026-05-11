@@ -174,7 +174,47 @@ async function render() {
         renderAdvertiser();
     } else if (currentWindow === 'admin') {
         renderAdmin();
+    } else if (currentWindow === 'leaderboard') {
+        renderLeaderboard();
     }
+}
+
+async function renderLeaderboard() {
+    const main = document.getElementById('main-content');
+    main.innerHTML = '<p>Cargando ranking...</p>';
+
+    const topUsers = await apiFetch('/user/leaderboard');
+    if (!topUsers) return;
+
+    main.innerHTML = `
+        <div style="margin-bottom: 20px;">
+            <button class="btn btn-link" onclick="showWindow('free')" style="padding:0; margin-bottom:10px">
+                <i class="fas fa-arrow-left"></i> Volver
+            </button>
+            <h2 style="margin:0">Ranking de Usuarios</h2>
+            <p style="color:var(--text-muted); font-size:14px">Los mejores de la comunidad Verd</p>
+        </div>
+
+        <div style="background:var(--card-bg); border-radius:20px; overflow:hidden; border: 1px solid #222">
+            ${topUsers.map((u, i) => `
+                <div style="display:flex; align-items:center; padding:15px; border-bottom: 1px solid #222; ${i < 3 ? 'background:rgba(0,255,127,0.05)' : ''}">
+                    <div style="width:30px; font-weight:800; color:${i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? '#cd7f32' : 'var(--text-muted)'}">
+                        ${i + 1}
+                    </div>
+                    <div style="width:40px; height:40px; background:#333; border-radius:50%; margin-right:15px; display:flex; align-items:center; justify-content:center; font-weight:bold">
+                        ${u.username[0].toUpperCase()}
+                    </div>
+                    <div style="flex:1">
+                        <div style="font-weight:600">${escapeHTML(u.username)}</div>
+                        <div style="font-size:11px; color:var(--text-muted)"><i class="fas fa-fire" style="color:orange"></i> ${u.dailyStreak || 0} días de racha</div>
+                    </div>
+                    <div style="font-weight:bold; color:var(--primary-green)">
+                        ${u.points} <i class="fas fa-coins" style="font-size:10px"></i>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
 }
 
 async function renderAdvertiser() {
@@ -187,6 +227,14 @@ async function renderAdvertiser() {
                 <i class="fas fa-arrow-left"></i> Volver
             </button>
             <h2 style="margin:0">Panel de Anunciantes</h2>
+        </div>
+
+        <div style="background:var(--card-bg); padding:20px; border-radius:15px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; border: 1px solid #333">
+            <div>
+                <div style="font-size:12px; color:var(--text-muted)">SALDO PUBLICITARIO</div>
+                <div style="font-size:24px; font-weight:800; color:var(--primary-green)">$${(userData.advertiserCredits || 0).toFixed(2)} <span style="font-size:12px">USD</span></div>
+            </div>
+            <button class="btn btn-primary" style="width:auto; padding: 10px 20px" onclick="renderAddCredits()">CARGAR</button>
         </div>
 
         <div style="display:flex; gap:10px; margin-bottom:20px">
@@ -216,6 +264,49 @@ function renderMyAds() {
             </div>
         `).join('');
     });
+}
+
+function renderAddCredits() {
+    const container = document.getElementById('advertiser-sub-content');
+    container.innerHTML = `
+        <div class="auth-container" style="min-height:auto; padding:0">
+            <h3>Cargar Saldo</h3>
+            <p style="font-size:14px; color:var(--text-muted)">Selecciona un paquete para añadir créditos a tu cuenta.</p>
+
+            <div class="config-item" onclick="addCredits(10)" style="cursor:pointer">
+                <div class="config-info">
+                    <h4>Paquete Básico</h4>
+                    <p>2,000 vistas aproximadas</p>
+                </div>
+                <div style="font-weight:bold">$10.00 USD</div>
+            </div>
+
+            <div class="config-item" onclick="addCredits(50)" style="cursor:pointer">
+                <div class="config-info">
+                    <h4>Paquete Popular</h4>
+                    <p>10,000 vistas aproximadas</p>
+                </div>
+                <div style="font-weight:bold">$50.00 USD</div>
+            </div>
+
+            <p style="font-size:12px; color:var(--text-muted); text-align:center; margin-top:20px">
+                * Serás redirigido a la pasarela de pago segura.
+            </p>
+        </div>
+    `;
+}
+
+async function addCredits(amount) {
+    // Demo implementation: instantly add credits
+    const res = await apiFetch('/advertiser/add-credits', {
+        method: 'POST',
+        body: JSON.stringify({ amount })
+    });
+    if (res) {
+        userData.advertiserCredits = res.credits;
+        showToast(`$${amount} USD añadidos con éxito (DEMO)`);
+        renderAdvertiser();
+    }
 }
 
 function renderCreateAd() {
@@ -254,6 +345,14 @@ function renderCreateAd() {
                 <input type="hidden" id="ad-lng">
             </div>
             <div class="form-group">
+                <label>Botón de Acción (Opcional)</label>
+                <input type="text" id="ad-cta-text" placeholder="Ej: Visitar Web">
+            </div>
+            <div class="form-group">
+                <label>Enlace del Botón (URL)</label>
+                <input type="url" id="ad-cta-url" placeholder="https://tu-sitio.com">
+            </div>
+            <div class="form-group">
                 <label>Cantidad de Vistas</label>
                 <input type="number" id="ad-views" value="1000" min="100">
             </div>
@@ -279,6 +378,8 @@ function renderCreateAd() {
         formData.append('targetCountry', document.getElementById('ad-target-country').value);
         formData.append('lat', document.getElementById('ad-lat').value);
         formData.append('lng', document.getElementById('ad-lng').value);
+        formData.append('ctaText', document.getElementById('ad-cta-text').value);
+        formData.append('ctaUrl', document.getElementById('ad-cta-url').value);
 
         const token = localStorage.getItem('token');
         try {
@@ -766,8 +867,13 @@ async function renderConfig() {
 
     main.innerHTML = `
         <div style="text-align:center; padding: 20px 0;">
-            <div style="width:80px; height:80px; background:var(--primary-green); border-radius:50%; margin:auto; display:flex; align-items:center; justify-content:center; color:black; font-size:30px; font-weight:bold; margin-bottom:10px">
-                ${escapeHTML(userData.username[0].toUpperCase())}
+            <div style="position:relative; width:80px; height:80px; margin:auto; margin-bottom:10px">
+                <div style="width:80px; height:80px; background:var(--primary-green); border-radius:50%; display:flex; align-items:center; justify-content:center; color:black; font-size:30px; font-weight:bold;">
+                    ${escapeHTML(userData.username[0].toUpperCase())}
+                </div>
+                <div style="position:absolute; bottom:-5px; right:-5px; background:#111; border:1px solid #333; padding:2px 8px; border-radius:12px; font-size:12px; color:orange; font-weight:bold">
+                    <i class="fas fa-fire"></i> ${userData.dailyStreak || 0}
+                </div>
             </div>
             <h2 style="margin:0">${escapeHTML(userData.username)}</h2>
             <p style="color:var(--text-muted); font-size:14px">${escapeHTML(userData.email)}</p>
@@ -804,7 +910,7 @@ async function renderConfig() {
             <i class="fas fa-ad"></i>
             <div class="config-info">
                 <h4>Anunciantes</h4>
-                <p>Publica tus propios videos</p>
+                <p>Saldo: $${(userData.advertiserCredits || 0).toFixed(2)} USD</p>
             </div>
             <i class="fas fa-chevron-right" style="font-size:12px; color:#444"></i>
         </div>
@@ -842,6 +948,10 @@ async function startVideo(adId) {
     const m = document.getElementById('video-modal');
     const v = document.getElementById('ad-video');
 
+    // Reset CTA
+    const oldCta = document.getElementById('video-cta');
+    if (oldCta) oldCta.remove();
+
     // For demo, if no real video URL, use a placeholder
     v.src = ad.videoUrl ? (ad.videoUrl.startsWith('http') ? ad.videoUrl : `${API_BASE}/${ad.videoUrl}`) : 'https://www.w3schools.com/html/mov_bbb.mp4';
 
@@ -856,8 +966,32 @@ async function startVideo(adId) {
         document.getElementById('video-timer').innerText = t + 's';
         if (t <= 0) {
             clearInterval(i);
-            m.style.display = 'none';
-            v.pause();
+
+            if (ad.ctaUrl) {
+                const ctaBtn = document.createElement('a');
+                ctaBtn.id = 'video-cta';
+                ctaBtn.href = ad.ctaUrl;
+                ctaBtn.target = '_blank';
+                ctaBtn.innerText = ad.ctaText || 'VISITAR WEB';
+                ctaBtn.className = 'btn btn-primary';
+                ctaBtn.style.position = 'absolute';
+                ctaBtn.style.bottom = '20px';
+                ctaBtn.style.left = '50%';
+                ctaBtn.style.transform = 'translateX(-50%)';
+                ctaBtn.style.width = '200px';
+                ctaBtn.onclick = () => { m.style.display = 'none'; v.pause(); };
+                m.querySelector('.modal-content').appendChild(ctaBtn);
+
+                // Add a close button
+                const closeBtn = document.createElement('button');
+                closeBtn.innerText = 'Cerrar';
+                closeBtn.style.marginTop = '10px';
+                closeBtn.onclick = () => { m.style.display = 'none'; v.pause(); };
+                // ...
+            } else {
+                m.style.display = 'none';
+                v.pause();
+            }
 
             const res = await apiFetch(`/ads/complete/${adId}`, { method: 'POST' });
             if (res && res.points !== undefined) {
