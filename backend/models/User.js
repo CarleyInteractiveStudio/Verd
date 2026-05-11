@@ -34,6 +34,7 @@ const UserSchema = new mongoose.Schema({
     dailyStreak: { type: Number, default: 0 },
     lastActiveAt: { type: Date, default: Date.now },
     advertiserCredits: { type: Number, default: 0 },
+    displayName: String,
     role: { type: String, enum: ['user', 'advertiser', 'admin'], default: 'user' }
 }, { timestamps: true });
 

@@ -11,6 +11,72 @@ function toggleAuth(type) {
     document.getElementById('register-form').style.display = type === 'register' ? 'flex' : 'none';
 }
 
+function initFeedLogic() {
+    const container = document.getElementById('feed-container');
+    if (!container) return;
+
+    const items = container.querySelectorAll('.feed-item');
+    const timers = {};
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const video = entry.target.querySelector('video');
+            const adId = entry.target.getAttribute('data-ad-id');
+
+            if (entry.isIntersecting) {
+                video.play();
+                startFeedTimer(adId, timers);
+            } else {
+                video.pause();
+                if (timers[adId]) {
+                    clearInterval(timers[adId].interval);
+                    delete timers[adId];
+                }
+            }
+        });
+    }, { threshold: 0.8 });
+
+    items.forEach(item => observer.observe(item));
+}
+
+function startFeedTimer(adId, timers) {
+    if (timers[adId]) return;
+
+    let t = 15;
+    const timerEl = document.getElementById(`timer-${adId}`);
+
+    timers[adId] = {
+        seconds: t,
+        interval: setInterval(async () => {
+            t--;
+            if (timerEl) timerEl.innerText = t + 's';
+            if (t <= 0) {
+                clearInterval(timers[adId].interval);
+                if (timerEl) timerEl.style.display = 'none';
+
+                const res = await apiFetch(`/ads/complete/${adId}`, { method: 'POST' });
+                if (res && res.points !== undefined) {
+                    userPoints = res.points;
+                    document.getElementById('user-points').innerText = userPoints;
+                    showToast('¡Has ganado 2 puntos!');
+                }
+            }
+        }, 1000)
+    };
+}
+
+function toggleFeedVideo(btn) {
+    const video = btn.closest('.feed-item').querySelector('video');
+    const icon = btn.querySelector('i');
+    if (video.paused) {
+        video.play();
+        icon.className = 'fas fa-pause';
+    } else {
+        video.pause();
+        icon.className = 'fas fa-play';
+    }
+}
+
 async function handleLogin() {
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
@@ -92,9 +158,42 @@ async function initApp() {
     if (userData) {
         userPoints = userData.points;
         document.getElementById('user-points').innerText = userPoints;
+        loadNotifications();
     }
 
     showWindow('free');
+}
+
+async function loadNotifications() {
+    const list = await apiFetch('/notifications');
+    if (!list) return;
+
+    const unread = list.some(n => !n.isRead);
+    document.getElementById('notif-badge').style.display = unread ? 'block' : 'none';
+
+    const container = document.getElementById('notif-list');
+    if (list.length === 0) {
+        container.innerHTML = '<p style="padding:15px; font-size:12px; color:var(--text-muted); text-align:center">No tienes notificaciones</p>';
+        return;
+    }
+
+    container.innerHTML = list.map(n => `
+        <div style="padding:15px; border-bottom:1px solid #111; ${!n.isRead ? 'background:rgba(0,255,127,0.02)' : ''}">
+            <div style="font-size:12px; font-weight:bold">${escapeHTML(n.title)}</div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:3px">${escapeHTML(n.message)}</div>
+            <div style="font-size:9px; color:#444; margin-top:5px">${new Date(n.createdAt).toLocaleString()}</div>
+        </div>
+    `).join('');
+}
+
+function toggleNotifications() {
+    const d = document.getElementById('notif-dropdown');
+    d.style.display = d.style.display === 'none' ? 'block' : 'none';
+}
+
+async function markNotifsRead() {
+    await apiFetch('/notifications/read-all', { method: 'POST' });
+    loadNotifications();
 }
 
 function checkAuth() {
@@ -152,16 +251,28 @@ async function render() {
             </div>
         `;
     } else if (currentWindow === 'random') {
+        const ads = await apiFetch('/ads/random/feed') || [];
         main.innerHTML = `
-            <div style="text-align:center; padding-top:100px">
-                <div style="background:var(--card-bg); padding:40px; border-radius:30px; border: 2px solid var(--primary-green); display:inline-block; margin-bottom:20px">
-                    <i class="fas fa-play-circle" style="font-size:80px; color:var(--primary-green)"></i>
-                </div>
-                <h2>Modo Aleatorio</h2>
-                <p style="color:var(--text-muted); margin-bottom:30px">Descubre nuevo contenido y gana</p>
-                <button class="btn btn-primary" onclick="startVideo()" style="width:200px; margin:auto">VER AHORA</button>
+            <div class="feed-container" id="feed-container">
+                ${ads.map((ad, idx) => `
+                    <div class="feed-item" data-ad-id="${ad._id}">
+                        <video class="feed-video" loop playsinline src="${ad.videoUrl ? (ad.videoUrl.startsWith('http') ? ad.videoUrl : `${API_BASE}/${ad.videoUrl}`) : 'https://www.w3schools.com/html/mov_bbb.mp4'}"></video>
+                        <div class="feed-overlay">
+                            <h3 style="margin:0">${escapeHTML(ad.title)}</h3>
+                            <p style="font-size:12px; margin-top:5px; color:#ccc">${escapeHTML(ad.advertiser.username)}</p>
+                            ${ad.ctaUrl ? `<button class="btn btn-primary" style="width:auto; padding:10px 20px" onclick="window.open('${ad.ctaUrl}', '_blank')">${escapeHTML(ad.ctaText || 'Saber Más')}</button>` : ''}
+                        </div>
+                        <div class="feed-actions">
+                            <div class="feed-action-btn" onclick="toggleFeedVideo(this)"><i class="fas fa-play"></i></div>
+                            <div class="feed-action-btn"><i class="fas fa-heart"></i></div>
+                            <div class="feed-action-btn" onclick="showToast('Puntos: +2')"><i class="fas fa-coins" style="color:gold"></i></div>
+                        </div>
+                        <div class="feed-timer" id="timer-${ad._id}" style="position:absolute; top:20px; right:20px; background:rgba(0,0,0,0.5); padding:5px 10px; border-radius:15px; font-weight:bold; color:var(--primary-green)">15s</div>
+                    </div>
+                `).join('')}
             </div>
         `;
+        initFeedLogic();
     } else if (currentWindow === 'config') {
         renderConfig();
     } else if (currentWindow === 'kyc') {
@@ -205,7 +316,7 @@ async function renderLeaderboard() {
                         ${u.username[0].toUpperCase()}
                     </div>
                     <div style="flex:1">
-                        <div style="font-weight:600">${escapeHTML(u.username)}</div>
+                        <div style="font-weight:600">${escapeHTML(u.displayName || u.username)}</div>
                         <div style="font-size:11px; color:var(--text-muted)"><i class="fas fa-fire" style="color:orange"></i> ${u.dailyStreak || 0} días de racha</div>
                     </div>
                     <div style="font-weight:bold; color:var(--primary-green)">
@@ -524,7 +635,50 @@ async function renderAdmin() {
             </div>
             <i class="fas fa-chevron-right" style="font-size:12px; color:#444"></i>
         </div>
+
+        <div style="margin-top:20px; background:var(--card-bg); padding:15px; border-radius:15px; border:1px solid #222">
+            <h4 style="margin-top:0">Crecimiento de Usuarios</h4>
+            <canvas id="userChart"></canvas>
+        </div>
+        <div style="margin-top:20px; background:var(--card-bg); padding:15px; border-radius:15px; border:1px solid #222">
+            <h4 style="margin-top:0">Vistas Semanales</h4>
+            <canvas id="revenueChart"></canvas>
+        </div>
     `;
+    renderAdminCharts();
+}
+
+async function renderAdminCharts() {
+    const data = await apiFetch('/admin/analytics');
+    if (!data) return;
+
+    const ctxUser = document.getElementById('userChart').getContext('2d');
+    new Chart(ctxUser, {
+        type: 'line',
+        data: {
+            labels: data.userGrowth.map(d => d._id),
+            datasets: [{
+                label: 'Nuevos Usuarios',
+                data: data.userGrowth.map(d => d.count),
+                borderColor: '#00ff7f',
+                tension: 0.4
+            }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
+    });
+
+    const ctxRev = document.getElementById('revenueChart').getContext('2d');
+    new Chart(ctxRev, {
+        type: 'bar',
+        data: {
+            labels: data.viewRevenue.map(d => d._id),
+            datasets: [{
+                label: 'Vistas Totales',
+                data: data.viewRevenue.map(d => d.views),
+                backgroundColor: 'rgba(0, 255, 127, 0.5)'
+            }]
+        }
+    });
 }
 
 async function adminList(type) {
@@ -875,8 +1029,8 @@ async function renderConfig() {
                     <i class="fas fa-fire"></i> ${userData.dailyStreak || 0}
                 </div>
             </div>
-            <h2 style="margin:0">${escapeHTML(userData.username)}</h2>
-            <p style="color:var(--text-muted); font-size:14px">${escapeHTML(userData.email)}</p>
+            <h2 style="margin:0">${escapeHTML(userData.displayName || userData.username)}</h2>
+            <p style="color:var(--text-muted); font-size:14px">@${escapeHTML(userData.username)} | ${escapeHTML(userData.email)}</p>
         </div>
 
         <div class="config-item">
@@ -926,8 +1080,50 @@ async function renderConfig() {
             </div>
         ` : ''}
 
+        <div class="config-item" onclick="renderEditProfile()">
+            <i class="fas fa-user-edit"></i>
+            <div class="config-info">
+                <h4>Editar Perfil</h4>
+                <p>Cambia tu nombre de pantalla</p>
+            </div>
+            <i class="fas fa-chevron-right" style="font-size:12px; color:#444"></i>
+        </div>
+
         <button class="btn btn-link" onclick="handleLogout()" style="color:var(--danger); margin-top:30px">Cerrar Sesión</button>
     `;
+}
+
+function renderEditProfile() {
+    const main = document.getElementById('main-content');
+    main.innerHTML = `
+        <div style="margin-bottom: 20px;">
+            <button class="btn btn-link" onclick="showWindow('config')" style="padding:0; margin-bottom:10px">
+                <i class="fas fa-arrow-left"></i> Volver
+            </button>
+            <h2 style="margin:0">Editar Perfil</h2>
+        </div>
+
+        <div class="auth-container" style="min-height:auto; padding:0">
+            <div class="form-group">
+                <label>Nombre de Pantalla</label>
+                <input type="text" id="edit-display-name" value="${escapeHTML(userData.displayName || '')}" placeholder="Ej: Juan El Pro">
+            </div>
+            <button class="btn btn-primary" onclick="updateProfile()">GUARDAR CAMBIOS</button>
+        </div>
+    `;
+}
+
+async function updateProfile() {
+    const displayName = document.getElementById('edit-display-name').value;
+    const res = await apiFetch('/user/update-profile', {
+        method: 'POST',
+        body: JSON.stringify({ displayName })
+    });
+    if (res) {
+        userData.displayName = res.displayName;
+        showToast('Perfil actualizado');
+        showWindow('config');
+    }
 }
 
 function handleLogout() {

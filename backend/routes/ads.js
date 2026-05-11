@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Ad = require('../models/Ad');
 const User = require('../models/User');
+const ViewLog = require('../models/ViewLog');
 const auth = require('../middleware/auth');
 const mongoose = require('mongoose');
 
@@ -52,6 +53,27 @@ router.get('/:id', auth, async (req, res) => {
     }
 });
 
+// @route   GET api/ads/random/feed
+// @desc    Get ads for the vertical feed
+router.get('/random/feed', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        const ads = await Ad.find({
+            status: 'active',
+            $expr: { $lt: ["$viewsCompleted", "$totalViewsOrdered"] },
+            $or: [
+                { scope: 'global' },
+                { scope: 'national', targetCountry: user.country }
+            ]
+        }).populate('advertiser', 'username').limit(10);
+
+        // Shuffle ads for a fresh feed
+        res.json(ads.sort(() => Math.random() - 0.5));
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
 // @route   GET api/ads/random
 // @desc    Get a random ad
 router.get('/random', auth, async (req, res) => {
@@ -64,8 +86,6 @@ router.get('/random', auth, async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
-
-const ViewLog = require('../models/ViewLog');
 
 // @route   POST api/ads/complete/:id
 // @desc    Mark ad as watched and award points

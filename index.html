@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="dark-theme">
 
@@ -63,7 +64,20 @@
     <div id="main-app" style="display: none;">
         <header>
             <div class="logo">Verd</div>
-            <div class="points-display"><span id="user-points">0</span> <i class="fas fa-coins"></i></div>
+            <div style="display:flex; align-items:center; gap:15px">
+                <div style="position:relative; cursor:pointer" onclick="toggleNotifications()">
+                    <i class="fas fa-bell" style="font-size:20px; color:var(--text-muted)"></i>
+                    <div id="notif-badge" style="display:none; position:absolute; top:-5px; right:-5px; background:var(--danger); width:10px; height:10px; border-radius:50%; border:2px solid var(--bg-color)"></div>
+                </div>
+                <div class="points-display"><span id="user-points">0</span> <i class="fas fa-coins"></i></div>
+            </div>
+            <div id="notif-dropdown" style="display:none; position:absolute; top:60px; right:20px; width:280px; background:var(--card-bg); border:1px solid #222; border-radius:15px; box-shadow:var(--shadow); z-index:1000; max-height:400px; overflow-y:auto">
+                <div style="padding:15px; border-bottom:1px solid #222; font-weight:bold; display:flex; justify-content:space-between">
+                    Notificaciones
+                    <span style="font-size:10px; color:var(--primary-green); cursor:pointer" onclick="markNotifsRead()">Marcar leídas</span>
+                </div>
+                <div id="notif-list"></div>
+            </div>
         </header>
 
         <main id="main-content"></main>

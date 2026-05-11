@@ -54,7 +54,7 @@ router.get('/leaderboard', auth, async (req, res) => {
         const topUsers = await User.find({ role: 'user' })
             .sort({ points: -1 })
             .limit(10)
-            .select('username points dailyStreak');
+            .select('username displayName points dailyStreak');
         res.json(topUsers);
     } catch (err) {
         res.status(500).send('Server Error');
@@ -84,6 +84,21 @@ router.post('/kyc', auth, (req, res) => {
             res.status(500).send('Server Error');
         }
     });
+});
+
+router.post('/update-profile', auth, async (req, res) => {
+    try {
+        const { displayName } = req.body;
+        const user = await User.findById(req.user.id);
+
+        if (displayName) user.displayName = displayName;
+
+        // Explicitly NOT allowing role changes here
+        await user.save();
+        res.json(user);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
 });
 
 module.exports = router;

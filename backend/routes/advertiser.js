@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Ad = require('../models/Ad');
+const User = require('../models/User');
+const ViewLog = require('../models/ViewLog');
 const auth = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
@@ -52,8 +54,6 @@ router.post('/ads', auth, (req, res) => {
         }
     });
 });
-
-const ViewLog = require('../models/ViewLog');
 
 router.get('/ads/:id/stats', auth, async (req, res) => {
     try {

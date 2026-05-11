@@ -44,7 +44,8 @@ router.post('/register', async (req, res) => {
             password,
             deviceId,
             country,
-            location: location ? { type: 'Point', coordinates: [location.lng, location.lat] } : undefined
+            location: location ? { type: 'Point', coordinates: [location.lng, location.lat] } : undefined,
+            displayName: username
         });
 
         if (referralCode) {
