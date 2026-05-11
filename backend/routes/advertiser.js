@@ -22,12 +22,16 @@ router.post('/ads', auth, (req, res) => {
     upload(req, res, async (err) => {
         if (err) return res.status(400).json({ msg: err });
         try {
+            const { title, totalViews, cpm, scope, targetCountry, lat, lng } = req.body;
             const newAd = new Ad({
-                title: req.body.title,
+                title,
                 videoUrl: req.file.path,
                 advertiser: req.user.id,
-                totalViewsOrdered: req.body.totalViews,
-                cpm: req.body.cpm,
+                totalViewsOrdered: totalViews,
+                cpm,
+                scope,
+                targetCountry,
+                location: (lat && lng) ? { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] } : undefined,
                 status: 'pending'
             });
             await newAd.save();
@@ -36,6 +40,37 @@ router.post('/ads', auth, (req, res) => {
             res.status(500).send('Server Error');
         }
     });
+});
+
+const ViewLog = require('../models/ViewLog');
+
+router.get('/ads/:id/stats', auth, async (req, res) => {
+    try {
+        const ad = await Ad.findById(req.params.id);
+        if (ad.advertiser.toString() !== req.user.id) return res.status(401).json({ msg: 'Unauthorized' });
+
+        const logs = await ViewLog.find({ ad: req.params.id });
+
+        // Group by country and state for summary
+        const stats = {};
+        logs.forEach(log => {
+            const key = `${log.country || 'Unknown'} - ${log.state || 'General'}`;
+            stats[key] = (stats[key] || 0) + 1;
+        });
+
+        res.json({ logs, stats });
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+router.get('/my-ads', auth, async (req, res) => {
+    try {
+        const ads = await Ad.find({ advertiser: req.user.id });
+        res.json(ads);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
 });
 
 module.exports = router;

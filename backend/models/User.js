@@ -19,6 +19,13 @@ const UserSchema = new mongoose.Schema({
         selfieImageUrl: String,
         rejectionReason: String
     },
+    location: {
+        type: { type: String, enum: ['Point'], default: 'Point' },
+        coordinates: { type: [Number], default: [0, 0] } // [longitude, latitude]
+    },
+    country: String,
+    state: String,
+    isPhoneVerified: { type: Boolean, default: false },
     referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     referralCount: { type: Number, default: 0 },
     videosWatchedToday: { type: Number, default: 0 },
@@ -26,5 +33,7 @@ const UserSchema = new mongoose.Schema({
     lastVideoWatchedAt: { type: Date },
     role: { type: String, enum: ['user', 'advertiser', 'admin'], default: 'user' }
 }, { timestamps: true });
+
+UserSchema.index({ location: '2dsphere' });
 
 module.exports = mongoose.model('User', UserSchema);

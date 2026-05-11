@@ -36,12 +36,23 @@ async function handleRegister() {
     const phone = document.getElementById('reg-phone').value;
     const password = document.getElementById('reg-password').value;
     const referralCode = document.getElementById('reg-referral').value;
-    const deviceId = 'web-device-' + Math.random().toString(36).substr(2, 9); // Placeholder for web
+    const deviceId = 'web-device-' + Math.random().toString(36).substr(2, 9);
+
+    let location = null;
+    try {
+        const pos = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject);
+        });
+        location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    } catch (e) {
+        alert("Para usar Verd y ver anuncios más precisos, necesitamos tu ubicación.");
+        return;
+    }
 
     const res = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, phone, password, deviceId, referralCode })
+        body: JSON.stringify({ username, email, phone, password, deviceId, referralCode, location })
     });
 
     const data = await res.json();
@@ -166,17 +177,50 @@ async function render() {
     }
 }
 
-function renderAdvertiser() {
+async function renderAdvertiser() {
     const main = document.getElementById('main-content');
+    const myAds = await apiFetch('/advertiser/my-ads') || [];
+
     main.innerHTML = `
         <div style="margin-bottom: 20px;">
             <button class="btn btn-link" onclick="showWindow('config')" style="padding:0; margin-bottom:10px">
                 <i class="fas fa-arrow-left"></i> Volver
             </button>
             <h2 style="margin:0">Panel de Anunciantes</h2>
-            <p style="color:var(--text-muted); font-size:14px">Publica tus videos y llega a miles de personas.</p>
         </div>
 
+        <div style="display:flex; gap:10px; margin-bottom:20px">
+            <button class="btn btn-primary" style="flex:1" onclick="renderCreateAd()">NUEVO ANUNCIO</button>
+            <button class="btn" style="flex:1; background:var(--card-bg)" onclick="renderMyAds()">MIS ANUNCIOS</button>
+        </div>
+
+        <div id="advertiser-sub-content"></div>
+    `;
+    renderMyAds();
+}
+
+function renderMyAds() {
+    const container = document.getElementById('advertiser-sub-content');
+    apiFetch('/advertiser/my-ads').then(ads => {
+        if (!ads || ads.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color:var(--text-muted)">No has publicado anuncios aún.</p>';
+            return;
+        }
+        container.innerHTML = ads.map(ad => `
+            <div class="config-item" onclick="renderAdStats('${ad._id}')">
+                <div class="config-info">
+                    <h4>${escapeHTML(ad.title)}</h4>
+                    <p>${ad.viewsCompleted} / ${ad.totalViewsOrdered} vistas | <span class="badge badge-${ad.status}">${ad.status}</span></p>
+                </div>
+                <i class="fas fa-chart-bar"></i>
+            </div>
+        `).join('');
+    });
+}
+
+function renderCreateAd() {
+    const container = document.getElementById('advertiser-sub-content');
+    container.innerHTML = `
         <form id="ad-form" class="auth-container" style="min-height:auto; padding:0">
             <div class="form-group">
                 <label>Título del Anuncio</label>
@@ -187,9 +231,31 @@ function renderAdvertiser() {
                 <input type="file" id="ad-video-file" accept="video/*" required>
             </div>
             <div class="form-group">
-                <label>Cantidad de Vistas Deseadas</label>
+                <label>Alcance</label>
+                <select id="ad-scope" onchange="updateAdScopeFields()">
+                    <option value="global">Mundial (Todo el mundo)</option>
+                    <option value="national">Nacional (Todo el país)</option>
+                    <option value="local">Local (Cercano a mi ubicación)</option>
+                </select>
+            </div>
+            <div id="geo-fields" style="display:none">
+                <div class="form-group">
+                    <label>País Objetivo</label>
+                    <select id="ad-target-country">
+                        <option value="Colombia">Colombia</option>
+                        <option value="Mexico">México</option>
+                        <option value="Argentina">Argentina</option>
+                        <option value="USA/Canada">USA/Canada</option>
+                        <!-- Add more Latin American countries -->
+                    </select>
+                </div>
+                <div id="map-container" style="height:200px; width:100%; border-radius:10px; margin-bottom:15px; display:none"></div>
+                <input type="hidden" id="ad-lat">
+                <input type="hidden" id="ad-lng">
+            </div>
+            <div class="form-group">
+                <label>Cantidad de Vistas</label>
                 <input type="number" id="ad-views" value="1000" min="100">
-                <p style="font-size:12px; color:var(--text-muted); margin-top:5px">Costo: $5.00 USD por cada 1,000 vistas</p>
             </div>
             <button type="submit" class="btn btn-primary" id="btn-ad-submit">PUBLICAR ANUNCIO</button>
         </form>
@@ -209,6 +275,10 @@ function renderAdvertiser() {
         formData.append('video', document.getElementById('ad-video-file').files[0]);
         formData.append('totalViews', document.getElementById('ad-views').value);
         formData.append('cpm', 5);
+        formData.append('scope', document.getElementById('ad-scope').value);
+        formData.append('targetCountry', document.getElementById('ad-target-country').value);
+        formData.append('lat', document.getElementById('ad-lat').value);
+        formData.append('lng', document.getElementById('ad-lng').value);
 
         const token = localStorage.getItem('token');
         try {
@@ -220,17 +290,88 @@ function renderAdvertiser() {
 
             if (res.ok) {
                 showToast('Anuncio enviado a revisión');
-                showWindow('config');
+                renderAdvertiser();
             } else {
                 showToast('Error al subir anuncio');
                 btn.disabled = false;
                 btn.innerText = 'PUBLICAR ANUNCIO';
             }
         } catch (err) {
-            alert('Error de conexión');
+            showToast('Error de conexión');
             btn.disabled = false;
         }
     };
+}
+
+let createAdMap = null;
+function updateAdScopeFields() {
+    const scope = document.getElementById('ad-scope').value;
+    const geoFields = document.getElementById('geo-fields');
+    const mapContainer = document.getElementById('map-container');
+
+    geoFields.style.display = scope === 'global' ? 'none' : 'block';
+    mapContainer.style.display = scope === 'local' ? 'block' : 'none';
+
+    if (scope === 'local' && !createAdMap) {
+        setTimeout(() => {
+            createAdMap = L.map('map-container').setView([4.5709, -74.2973], 5); // Default to LatAm center
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(createAdMap);
+
+            let marker;
+            createAdMap.on('click', (e) => {
+                if (marker) createAdMap.removeLayer(marker);
+                marker = L.marker(e.latlng).addTo(createAdMap);
+                document.getElementById('ad-lat').value = e.latlng.lat;
+                document.getElementById('ad-lng').value = e.latlng.lng;
+            });
+        }, 100);
+    }
+}
+
+async function renderAdStats(adId) {
+    const container = document.getElementById('advertiser-sub-content');
+    container.innerHTML = '<p>Cargando estadísticas...</p>';
+
+    const data = await apiFetch(`/advertiser/ads/${adId}/stats`);
+    if (!data) return;
+
+    container.innerHTML = `
+        <button class="btn btn-link" onclick="renderMyAds()" style="padding:0; margin-bottom:10px">
+            <i class="fas fa-arrow-left"></i> Volver a mis anuncios
+        </button>
+        <h3>Rendimiento del Anuncio</h3>
+        <div id="stats-map" style="height:300px; width:100%; border-radius:15px; margin-bottom:20px"></div>
+
+        <h4>Resumen por Región</h4>
+        <div id="region-stats">
+            ${Object.entries(data.stats).map(([region, count]) => `
+                <div class="config-item" style="padding:10px">
+                    <div class="config-info">
+                        <h4 style="font-size:14px">${region}</h4>
+                    </div>
+                    <div style="font-weight:bold; color:var(--primary-green)">${count} vistas</div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+
+    setTimeout(() => {
+        const statsMap = L.map('stats-map').setView([10, -80], 3);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(statsMap);
+
+        data.logs.forEach(log => {
+            if (log.location && log.location.coordinates) {
+                L.circleMarker([log.location.coordinates[1], log.location.coordinates[0]], {
+                    radius: 5,
+                    fillColor: "#00ff7f",
+                    color: "#000",
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(statsMap);
+            }
+        });
+    }, 100);
 }
 
 async function renderAdmin() {
