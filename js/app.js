@@ -4,6 +4,19 @@ let userData = null;
 const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:5000' : '';
 const API_URL = `${API_BASE}/api`;
 
+// --- Audio Helper ---
+const sounds = {
+    points: new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3'),
+    notif: new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3')
+};
+
+function playSound(name) {
+    if (sounds[name]) {
+        sounds[name].currentTime = 0;
+        sounds[name].play().catch(e => console.log('Audio blocked by browser'));
+    }
+}
+
 // --- Auth Logic ---
 
 function toggleAuth(type) {
@@ -59,6 +72,7 @@ function startFeedTimer(adId, timers) {
                     userPoints = res.points;
                     document.getElementById('user-points').innerText = userPoints;
                     showToast('¡Has ganado 2 puntos!');
+                    playSound('points');
                 }
             }
         }, 1000)
@@ -96,6 +110,12 @@ async function handleLogin() {
     }
 }
 
+async function getFingerprint() {
+    const fp = await FingerprintJS.load();
+    const result = await fp.get();
+    return result.visitorId;
+}
+
 async function handleRegister() {
     const username = document.getElementById('reg-username').value;
     const email = document.getElementById('reg-email').value;
@@ -115,10 +135,11 @@ async function handleRegister() {
         return;
     }
 
+    const fingerprint = await getFingerprint();
     const res = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, phone, password, deviceId, referralCode, location })
+        body: JSON.stringify({ username, email, phone, password, deviceId, referralCode, location, fingerprint })
     });
 
     const data = await res.json();
@@ -164,11 +185,18 @@ async function initApp() {
     showWindow('free');
 }
 
+let lastNotifCount = 0;
 async function loadNotifications() {
     const list = await apiFetch('/notifications');
     if (!list) return;
 
-    const unread = list.some(n => !n.isRead);
+    const unreadList = list.filter(n => !n.isRead);
+    if (unreadList.length > lastNotifCount) {
+        playSound('notif');
+    }
+    lastNotifCount = unreadList.length;
+
+    const unread = unreadList.length > 0;
     document.getElementById('notif-badge').style.display = unread ? 'block' : 'none';
 
     const container = document.getElementById('notif-list');
@@ -440,6 +468,18 @@ function renderCreateAd() {
                     <option value="local">Local (Cercano a mi ubicación)</option>
                 </select>
             </div>
+            <div class="form-group">
+                <label>Categoría</label>
+                <select id="ad-category">
+                    <option value="Tecnología">Tecnología</option>
+                    <option value="Moda">Moda</option>
+                    <option value="Deportes">Deportes</option>
+                    <option value="Comida">Comida</option>
+                    <option value="Viajes">Viajes</option>
+                    <option value="Videojuegos">Videojuegos</option>
+                    <option value="General">General</option>
+                </select>
+            </div>
             <div id="geo-fields" style="display:none">
                 <div class="form-group">
                     <label>País Objetivo</label>
@@ -489,6 +529,7 @@ function renderCreateAd() {
         formData.append('targetCountry', document.getElementById('ad-target-country').value);
         formData.append('lat', document.getElementById('ad-lat').value);
         formData.append('lng', document.getElementById('ad-lng').value);
+        formData.append('category', document.getElementById('ad-category').value);
         formData.append('ctaText', document.getElementById('ad-cta-text').value);
         formData.append('ctaUrl', document.getElementById('ad-cta-url').value);
 
@@ -750,7 +791,7 @@ function showToast(msg) {
     }, 3000);
 }
 
-function renderReferrals() {
+async function renderReferrals() {
     const main = document.getElementById('main-content');
     const referralCode = userData._id; // Using User ID as referral code for simplicity
 
@@ -782,11 +823,35 @@ function renderReferrals() {
 
         <div>
             <h3>Mis Invitados</h3>
-            <div id="referrals-list" class="config-item" style="justify-content:center">
-                <p style="color:var(--text-muted)">Has invitado a ${userData.referralCount || 0} personas.</p>
-            </div>
+            <div id="referrals-list">Cargando referidos...</div>
         </div>
     `;
+    loadDetailedReferrals();
+}
+
+async function loadDetailedReferrals() {
+    const list = await apiFetch('/user/referrals/detailed');
+    const container = document.getElementById('referrals-list');
+    if (!list || list.length === 0) {
+        container.innerHTML = '<p style="color:var(--text-muted); text-align:center">Aún no tienes invitados.</p>';
+        return;
+    }
+
+    container.innerHTML = list.map(r => {
+        const progress = Math.min(100, (r.totalVideosWatched / 20) * 100);
+        return `
+            <div class="config-item" style="flex-direction:column; align-items:stretch">
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px">
+                    <b>${escapeHTML(r.displayName || r.username)}</b>
+                    <span style="font-size:12px; color:var(--text-muted)">${r.totalVideosWatched}/20 videos</span>
+                </div>
+                <div style="height:6px; background:#222; border-radius:3px; overflow:hidden">
+                    <div style="height:100%; width:${progress}%; background:var(--primary-green); transition:0.3s"></div>
+                </div>
+                ${r.totalVideosWatched >= 20 ? '<div style="font-size:10px; color:var(--primary-green); margin-top:5px"><i class="fas fa-check-circle"></i> Bono acreditado</div>' : ''}
+            </div>
+        `;
+    }).join('');
 }
 
 function copyReferral(code) {
@@ -1095,6 +1160,7 @@ async function renderConfig() {
 
 function renderEditProfile() {
     const main = document.getElementById('main-content');
+    const categories = ['Tecnología', 'Moda', 'Deportes', 'Comida', 'Viajes', 'Videojuegos'];
     main.innerHTML = `
         <div style="margin-bottom: 20px;">
             <button class="btn btn-link" onclick="showWindow('config')" style="padding:0; margin-bottom:10px">
@@ -1108,19 +1174,40 @@ function renderEditProfile() {
                 <label>Nombre de Pantalla</label>
                 <input type="text" id="edit-display-name" value="${escapeHTML(userData.displayName || '')}" placeholder="Ej: Juan El Pro">
             </div>
+            <div class="form-group">
+                <label>Tus Intereses</label>
+                <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px">
+                    ${categories.map(c => `
+                        <div class="interest-chip ${userData.interests.includes(c) ? 'active' : ''}" onclick="toggleInterest(this, '${c}')">
+                            ${c}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
             <button class="btn btn-primary" onclick="updateProfile()">GUARDAR CAMBIOS</button>
         </div>
     `;
+}
+
+let selectedInterests = [];
+function toggleInterest(el, category) {
+    el.classList.toggle('active');
+    if (selectedInterests.includes(category)) {
+        selectedInterests = selectedInterests.filter(i => i !== category);
+    } else {
+        selectedInterests.push(category);
+    }
 }
 
 async function updateProfile() {
     const displayName = document.getElementById('edit-display-name').value;
     const res = await apiFetch('/user/update-profile', {
         method: 'POST',
-        body: JSON.stringify({ displayName })
+        body: JSON.stringify({ displayName, interests: selectedInterests })
     });
     if (res) {
         userData.displayName = res.displayName;
+        userData.interests = res.interests;
         showToast('Perfil actualizado');
         showWindow('config');
     }
@@ -1194,6 +1281,7 @@ async function startVideo(adId) {
                 userPoints = res.points;
                 document.getElementById('user-points').innerText = userPoints;
                 showToast('¡Has ganado 2 puntos!');
+                playSound('points');
             } else if (res && res.msg) {
                 showToast(res.msg);
             }

@@ -24,7 +24,16 @@ router.get('/free', auth, async (req, res) => {
                 { scope: 'national', targetCountry: user.country },
                 { scope: 'local', targetCountry: user.country }
             ]
-        }).limit(50);
+        }).limit(100);
+
+        // Sort by interest match
+        if (user.interests && user.interests.length > 0) {
+            ads.sort((a, b) => {
+                const aMatch = user.interests.includes(a.category) ? 1 : 0;
+                const bMatch = user.interests.includes(b.category) ? 1 : 0;
+                return bMatch - aMatch;
+            });
+        }
 
         // Sort by proximity if user has location and ad is local
         if (user.location && user.location.coordinates[0] !== 0) {

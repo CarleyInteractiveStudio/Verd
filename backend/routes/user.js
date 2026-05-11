@@ -86,12 +86,23 @@ router.post('/kyc', auth, (req, res) => {
     });
 });
 
+router.get('/referrals/detailed', auth, async (req, res) => {
+    try {
+        const referrals = await User.find({ referredBy: req.user.id })
+            .select('username displayName totalVideosWatched createdAt');
+        res.json(referrals);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
 router.post('/update-profile', auth, async (req, res) => {
     try {
-        const { displayName } = req.body;
+        const { displayName, interests } = req.body;
         const user = await User.findById(req.user.id);
 
         if (displayName) user.displayName = displayName;
+        if (interests) user.interests = interests;
 
         // Explicitly NOT allowing role changes here
         await user.save();

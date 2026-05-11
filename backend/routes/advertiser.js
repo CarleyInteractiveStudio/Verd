@@ -25,7 +25,7 @@ router.post('/ads', auth, (req, res) => {
         if (err) return res.status(400).json({ msg: err });
         try {
             const user = await User.findById(req.user.id);
-            const { title, totalViews, cpm, scope, targetCountry, lat, lng, ctaText, ctaUrl } = req.body;
+            const { title, totalViews, cpm, scope, targetCountry, lat, lng, ctaText, ctaUrl, category } = req.body;
 
             const cost = (totalViews / 1000) * cpm;
             if (user.advertiserCredits < cost) {
@@ -43,6 +43,7 @@ router.post('/ads', auth, (req, res) => {
                 location: (lat && lng) ? { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] } : undefined,
                 ctaText,
                 ctaUrl,
+                category,
                 status: 'pending'
             });
             user.advertiserCredits -= cost;

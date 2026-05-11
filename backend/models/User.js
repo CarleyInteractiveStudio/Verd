@@ -35,6 +35,8 @@ const UserSchema = new mongoose.Schema({
     lastActiveAt: { type: Date, default: Date.now },
     advertiserCredits: { type: Number, default: 0 },
     displayName: String,
+    fingerprint: { type: String },
+    interests: { type: [String], default: [] },
     role: { type: String, enum: ['user', 'advertiser', 'admin'], default: 'user' }
 }, { timestamps: true });
 

@@ -336,6 +336,23 @@ video {
 .badge-unverified { background: rgba(255, 77, 77, 0.1); color: var(--danger); }
 .badge-rejected { background: rgba(255, 77, 77, 0.1); color: var(--danger); }
 
+/* Interest Chips */
+.interest-chip {
+    padding: 8px 16px;
+    border-radius: 20px;
+    background: #111;
+    border: 1px solid #333;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.interest-chip.active {
+    background: rgba(0, 255, 127, 0.1);
+    border-color: var(--primary-green);
+    color: var(--primary-green);
+}
+
 /* Notifications */
 #notification-toast {
     position: fixed;

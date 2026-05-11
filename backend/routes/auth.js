@@ -15,7 +15,7 @@ const countryMap = {
 // @route   POST api/auth/register
 // @desc    Register user
 router.post('/register', async (req, res) => {
-    const { username, email, phone, password, deviceId, referralCode, location } = req.body;
+    const { username, email, phone, password, deviceId, referralCode, location, fingerprint } = req.body;
 
     try {
         // Simple country detection from phone prefix
@@ -34,8 +34,8 @@ router.post('/register', async (req, res) => {
         let user = await User.findOne({ $or: [{ email }, { phone }] });
         if (user) return res.status(400).json({ msg: 'User already exists with this email or phone' });
 
-        const deviceCount = await User.countDocuments({ deviceId });
-        if (deviceCount >= 2) return res.status(400).json({ msg: 'Device limit reached' });
+        const deviceCount = await User.countDocuments({ $or: [{ deviceId }, { fingerprint }] });
+        if (deviceCount >= 2) return res.status(400).json({ msg: 'Límite de cuentas alcanzado para este dispositivo.' });
 
         user = new User({
             username,
@@ -45,7 +45,8 @@ router.post('/register', async (req, res) => {
             deviceId,
             country,
             location: location ? { type: 'Point', coordinates: [location.lng, location.lat] } : undefined,
-            displayName: username
+            displayName: username,
+            fingerprint
         });
 
         if (referralCode) {
