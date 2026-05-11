@@ -19,6 +19,18 @@ router.get('/free', auth, async (req, res) => {
     }
 });
 
+// @route   GET api/ads/:id
+// @desc    Get ad by ID
+router.get('/:id', auth, async (req, res) => {
+    try {
+        const ad = await Ad.findById(req.params.id);
+        if (!ad) return res.status(404).json({ msg: 'Ad not found' });
+        res.json(ad);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
 // @route   GET api/ads/random
 // @desc    Get a random ad
 router.get('/random', auth, async (req, res) => {

@@ -7,16 +7,16 @@ const User = require('../models/User');
 // @route   POST api/auth/register
 // @desc    Register user
 router.post('/register', async (req, res) => {
-    const { username, email, password, deviceId, referralCode } = req.body;
+    const { username, email, phone, password, deviceId, referralCode } = req.body;
 
     try {
-        let user = await User.findOne({ email });
-        if (user) return res.status(400).json({ msg: 'User already exists' });
+        let user = await User.findOne({ $or: [{ email }, { phone }] });
+        if (user) return res.status(400).json({ msg: 'User already exists with this email or phone' });
 
         const deviceCount = await User.countDocuments({ deviceId });
         if (deviceCount >= 2) return res.status(400).json({ msg: 'Device limit reached' });
 
-        user = new User({ username, email, password, deviceId });
+        user = new User({ username, email, phone, password, deviceId });
 
         if (referralCode) {
             const referrer = await User.findById(referralCode);

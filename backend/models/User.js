@@ -3,18 +3,21 @@ const mongoose = require('mongoose');
 const UserSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
+    phone: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     points: { type: Number, default: 0 },
     deviceId: { type: String, required: true },
     verificationStatus: {
         type: String,
-        enum: ['unverified', 'pending', 'verified'],
+        enum: ['unverified', 'pending', 'verified', 'rejected'],
         default: 'unverified'
     },
     kycData: {
         fullName: String,
         idNumber: String,
-        documentImageUrl: String // To be deleted after approval
+        documentImageUrl: String,
+        selfieImageUrl: String,
+        rejectionReason: String
     },
     referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     referralCount: { type: Number, default: 0 },

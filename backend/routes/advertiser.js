@@ -28,7 +28,7 @@ router.post('/ads', auth, (req, res) => {
                 advertiser: req.user.id,
                 totalViewsOrdered: req.body.totalViews,
                 cpm: req.body.cpm,
-                status: 'active' // For simplicity in this demo
+                status: 'pending'
             });
             await newAd.save();
             res.json(newAd);
