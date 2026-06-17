@@ -18,6 +18,8 @@ app.use('/api/ads', require('./routes/ads'));
 app.use('/api/user', require('./routes/user'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/advertiser', require('./routes/advertiser'));
+app.use('/api/withdrawals', require('./routes/withdrawals'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 // Basic Route
 app.get('/', (req, res) => {

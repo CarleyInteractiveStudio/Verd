@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Ad = require('../models/Ad');
 const User = require('../models/User');
+const ViewLog = require('../models/ViewLog');
 const auth = require('../middleware/auth');
 const mongoose = require('mongoose');
 
@@ -9,11 +10,74 @@ const mongoose = require('mongoose');
 // @desc    Get ads for the "Free Videos" window
 router.get('/free', auth, async (req, res) => {
     try {
+        const user = await User.findById(req.user.id);
+
+        // Find ads matching geo requirements:
+        // 1. Global ads
+        // 2. National ads (user country matches ad targetCountry)
+        // 3. Local ads (within same country, prioritized by proximity)
         const ads = await Ad.find({
             status: 'active',
-            $expr: { $lt: ["$viewsCompleted", "$totalViewsOrdered"] }
-        }).limit(20);
-        res.json(ads);
+            $expr: { $lt: ["$viewsCompleted", "$totalViewsOrdered"] },
+            $or: [
+                { scope: 'global' },
+                { scope: 'national', targetCountry: user.country },
+                { scope: 'local', targetCountry: user.country }
+            ]
+        }).limit(100);
+
+        // Sort by interest match
+        if (user.interests && user.interests.length > 0) {
+            ads.sort((a, b) => {
+                const aMatch = user.interests.includes(a.category) ? 1 : 0;
+                const bMatch = user.interests.includes(b.category) ? 1 : 0;
+                return bMatch - aMatch;
+            });
+        }
+
+        // Sort by proximity if user has location and ad is local
+        if (user.location && user.location.coordinates[0] !== 0) {
+            ads.sort((a, b) => {
+                if (a.scope === 'local' && b.scope !== 'local') return -1;
+                if (b.scope === 'local' && a.scope !== 'local') return 1;
+                return 0; // Simplified sorting
+            });
+        }
+
+        res.json(ads.slice(0, 20));
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   GET api/ads/:id
+// @desc    Get ad by ID
+router.get('/:id', auth, async (req, res) => {
+    try {
+        const ad = await Ad.findById(req.params.id);
+        if (!ad) return res.status(404).json({ msg: 'Ad not found' });
+        res.json(ad);
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+// @route   GET api/ads/random/feed
+// @desc    Get ads for the vertical feed
+router.get('/random/feed', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        const ads = await Ad.find({
+            status: 'active',
+            $expr: { $lt: ["$viewsCompleted", "$totalViewsOrdered"] },
+            $or: [
+                { scope: 'global' },
+                { scope: 'national', targetCountry: user.country }
+            ]
+        }).populate('advertiser', 'username').limit(10);
+
+        // Shuffle ads for a fresh feed
+        res.json(ads.sort(() => Math.random() - 0.5));
     } catch (err) {
         res.status(500).send('Server Error');
     }
@@ -68,6 +132,16 @@ router.post('/complete/:id', auth, async (req, res) => {
         user.totalVideosWatched = (user.totalVideosWatched || 0) + 1;
         user.lastVideoWatchedAt = now;
         await user.save();
+
+        // Log the view for analytics
+        const viewLog = new ViewLog({
+            ad: ad._id,
+            user: user._id,
+            country: user.country,
+            state: user.state,
+            location: user.location
+        });
+        await viewLog.save();
 
         // Referral logic
         if (user.referredBy && user.totalVideosWatched === 20) {
